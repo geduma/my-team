@@ -26,6 +26,11 @@ const router = createRouter({
       path: '/match',
       name: 'match',
       component: Match
+    },
+    {
+      path: '/tournament',
+      name: 'tournament',
+      component: Match
     }
   ]
 })
