@@ -13,7 +13,7 @@
     "build": "npm build",
     "start": "npm start"
   },
-  "author": "geduramc",
+  "author": "geduma",
   "license": "ISC",
   "devDependencies": {
     "standard": "^17.1.0"

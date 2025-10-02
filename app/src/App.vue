@@ -10,7 +10,7 @@ import { RouterView } from 'vue-router'
   <div class="overlay"></div>
   <RouterView />
   <footer>
-    <a href="https://geduramc.com" target="_blank">By @geduramc &#9749;</a>
+    <a href="https://geduma.com" target="_blank">by @geduma &#9749;</a>
   </footer>
 </template>
 
