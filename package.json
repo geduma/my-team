@@ -2,28 +2,26 @@
   "name": "my-team",
   "version": "0.0.1",
   "description": "my-team",
-  "main": "index.js",
-  "workspaces": [
-    "app",
-    "api"
-  ],
+  "author": "geduma",
+  "private": true,
   "scripts": {
-    "app:dev": "npm run dev --workspace=app",
-    "app:build": "npm run build --workspace=app",
-    "build": "npm build",
-    "start": "npm start"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "author": "geduramc",
-  "license": "ISC",
+  "dependencies": {
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.2"
+  },
+  "standard": {
+    "env": ["browser"]
+  },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.25",
+    "tailwindcss": "^3.3.2",
+    "vite": "^7.1.8",
     "standard": "^17.1.0"
-  },
-  "eslintConfig": {
-    "parserOptions": {
-      "project": "./api/tsconfig.json"
-    },
-    "extends": [
-      "./node_modules/ts-standard/eslintrc.json"
-    ]
   }
 }

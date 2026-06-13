@@ -4,13 +4,13 @@ import { RouterView } from 'vue-router'
 
 <template>
   <video playsinline autoplay muted loop>
-    <source src="../background.mp4" type="video/mp4">
+    <source src="/background.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
   <div class="overlay"></div>
   <RouterView />
   <footer>
-    <a href="https://geduramc.com" target="_blank">By @geduramc &#9749;</a>
+    <a href="https://geduma.com" target="_blank">by @geduma &#9749;</a>
   </footer>
 </template>
 
