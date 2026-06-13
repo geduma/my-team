@@ -1,7 +1,7 @@
 name: Azure Static Web Apps CI/CD
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
@@ -27,7 +27,6 @@ jobs:
           app_location: "/"
           api_location: ""
           output_location: "dist"
-          app_build_command: "npm run build"
           ###### End of Repository/Build Configurations ######
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
