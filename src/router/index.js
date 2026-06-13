@@ -3,6 +3,7 @@ import Home from '../components/Home.view.vue'
 import Join from '../components/Join.view.vue'
 import Match from '../components/Match.view.vue'
 import Create from '../components/Create.view.vue'
+import { getCurrentUser } from '../services/db'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,24 +16,39 @@ const router = createRouter({
     {
       path: '/create',
       name: 'create',
-      component: Create
+      component: Create,
+      meta: { requiresAuth: true }
     },
     {
-      path: '/join',
+      path: '/join/:hash',
       name: 'join',
-      component: Join
+      component: Join,
+      meta: { requiresAuth: true }
     },
     {
-      path: '/match',
+      path: '/match/:id',
       name: 'match',
-      component: Match
+      component: Match,
+      meta: { requiresAuth: true }
     },
     {
       path: '/tournament',
       name: 'tournament',
-      component: Match
+      component: Match,
+      meta: { requiresAuth: true }
     }
   ]
+})
+
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth) {
+    const user = await getCurrentUser()
+    if (!user) {
+      next({ name: 'home', query: { login: 'true', redirect: to.fullPath } })
+      return
+    }
+  }
+  next()
 })
 
 export default router

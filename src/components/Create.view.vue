@@ -1,64 +1,147 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { getCurrentUser, saveEvent } from '../services/db'
+
+const router = useRouter()
+
+const title = ref('')
+const date = ref('')
+const time = ref('')
+const location = ref('')
+const maxPlayers = ref(22)
+const description = ref('')
+const submitting = ref(false)
+const error = ref('')
+const currentUser = ref(null)
+
+onMounted(async () => {
+  currentUser.value = await getCurrentUser()
+  if (!currentUser.value) {
+    router.push('/')
+  }
+})
+
+async function handleSubmit () {
+  error.value = ''
+  if (!title.value || !date.value || !time.value || !location.value) {
+    error.value = 'Please fill in all required fields'
+    return
+  }
+  submitting.value = true
+  try {
+    const event = {
+      ownerId: currentUser.value.id,
+      title: title.value,
+      date: date.value,
+      time: time.value,
+      location: location.value,
+      maxPlayers: Number(maxPlayers.value),
+      description: description.value,
+      players: [{
+        id: currentUser.value.id,
+        displayName: currentUser.value.displayName,
+        photoURL: currentUser.value.photoURL,
+        team: null
+      }]
+    }
+    const saved = await saveEvent(event)
+    router.push(`/match/${saved.id}`)
+  } catch (e) {
+    error.value = 'Error saving event'
+  } finally {
+    submitting.value = false
+  }
+}
+</script>
+
 <template>
   <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-lg bg-[#00000096] p-10">
-      <h1 class="text-center text-2xl font-bold text-indigo-600 sm:text-3xl">
+    <div class="mx-auto max-w-lg bg-[#00000096] p-10 rounded-lg">
+      <h1 class="text-center text-2xl font-bold text-[#64e34f] sm:text-3xl">
         Create a new match
       </h1>
 
-      <form action="" class="mb-0 mt-6 space-y-4 rounded-lg p-4 shadow-lg sm:p-6 lg:p-8">
+      <form class="mb-0 mt-6 space-y-4 rounded-lg p-4 shadow-lg sm:p-6 lg:p-8" @submit.prevent="handleSubmit">
         <div>
-          <label for="email" class="sr-only">Email</label>
-          <div class="relative">
-            <input type="email" class="w-full rounded-lg border-gray-200 p-4 pe-12 text-sm shadow-sm"
-              placeholder="Enter email" />
+          <label class="sr-only" for="title">Match title</label>
+          <input
+            id="title"
+            v-model="title"
+            class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+            placeholder="Match title"
+            required
+          />
+        </div>
 
-            <span class="absolute inset-y-0 end-0 grid place-content-center px-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-              </svg>
-            </span>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="sr-only" for="date">Date</label>
+            <input
+              id="date"
+              v-model="date"
+              type="date"
+              class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+              required
+            />
+          </div>
+          <div>
+            <label class="sr-only" for="time">Time</label>
+            <input
+              id="time"
+              v-model="time"
+              type="time"
+              class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+              required
+            />
           </div>
         </div>
 
         <div>
-          <label for="password" class="sr-only">Password</label>
-
-          <div class="relative">
-            <input type="password" class="w-full rounded-lg border-gray-200 p-4 pe-12 text-sm shadow-sm"
-              placeholder="Enter password" />
-
-            <span class="absolute inset-y-0 end-0 grid place-content-center px-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </span>
-          </div>
+          <label class="sr-only" for="location">Location</label>
+          <input
+            id="location"
+            v-model="location"
+            class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+            placeholder="Location"
+            required
+          />
         </div>
 
-        <button type="submit" class="block w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white">
-          Sign in
+        <div>
+          <label class="sr-only" for="maxPlayers">Number of players</label>
+          <input
+            id="maxPlayers"
+            v-model="maxPlayers"
+            type="number"
+            min="2"
+            max="50"
+            class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+            placeholder="Number of players"
+          />
+        </div>
+
+        <div>
+          <label class="sr-only" for="description">Description (optional)</label>
+          <textarea
+            id="description"
+            v-model="description"
+            class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+            placeholder="Description (optional)"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <p v-if="error" class="text-red-400 text-sm text-center">{{ error }}</p>
+
+        <button
+          type="submit"
+          class="block w-full rounded-lg bg-[#0b88de] px-5 py-3 text-sm font-medium text-white hover:bg-[#50b1f3]"
+          :disabled="submitting"
+        >
+          {{ submitting ? 'Creating...' : 'Create match' }}
         </button>
-
-        <p class="text-center text-sm text-gray-500">
-          No account?
-          <a class="underline" href="">Sign up</a>
-        </p>
       </form>
     </div>
   </div>
 </template>
-
-<script>
-export default {
-  setup() {
-    return {
-    }
-  }
-}
-</script>
