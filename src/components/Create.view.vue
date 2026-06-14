@@ -9,7 +9,6 @@ const title = ref('')
 const date = ref('')
 const time = ref('')
 const location = ref('')
-const maxPlayers = ref(22)
 const description = ref('')
 const submitting = ref(false)
 const error = ref('')
@@ -31,15 +30,16 @@ async function handleSubmit () {
   submitting.value = true
   try {
     const event = {
-      ownerId: currentUser.value.id,
+      ownerId: currentUser.value.googleId,
       title: title.value,
       date: date.value,
       time: time.value,
       location: location.value,
-      maxPlayers: Number(maxPlayers.value),
+      type: 'match',
+      maxPlayers: 22,
       description: description.value,
       players: [{
-        id: currentUser.value.id,
+        id: currentUser.value.googleId,
         displayName: currentUser.value.displayName,
         photoURL: currentUser.value.photoURL,
         team: null
@@ -58,7 +58,7 @@ async function handleSubmit () {
 <template>
   <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-lg bg-[#00000096] p-10 rounded-lg">
-      <h1 class="text-center text-2xl font-bold text-[#64e34f] sm:text-3xl">
+      <h1 class="text-center text-2xl font-bold text-[#dedcdc] sm:text-3xl">
         Create a new match
       </h1>
 
@@ -105,19 +105,6 @@ async function handleSubmit () {
             class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
             placeholder="Location"
             required
-          />
-        </div>
-
-        <div>
-          <label class="sr-only" for="maxPlayers">Number of players</label>
-          <input
-            id="maxPlayers"
-            v-model="maxPlayers"
-            type="number"
-            min="2"
-            max="50"
-            class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-            placeholder="Number of players"
           />
         </div>
 

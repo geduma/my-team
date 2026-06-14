@@ -31,7 +31,7 @@ async function loadEvent () {
       return
     }
     event.value = found
-    joined.value = found.players.some(p => p.id === currentUser.value.id)
+    joined.value = found.players.some(p => p.id === currentUser.value.googleId)
   } catch (e) {
     error.value = 'Error loading event'
   } finally {
@@ -43,7 +43,7 @@ async function handleJoin () {
   if (!event.value) return
   const updated = { ...event.value }
   updated.players.push({
-    id: currentUser.value.id,
+    id: currentUser.value.googleId,
     displayName: currentUser.value.displayName,
     photoURL: currentUser.value.photoURL,
     team: null

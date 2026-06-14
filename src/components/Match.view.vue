@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCurrentUser, getEvent, saveEvent } from '../services/db'
+import { getCurrentUser, getEvent, saveEvent, deleteEvent } from '../services/db'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,7 +14,12 @@ const error = ref('')
 const copySuccess = ref(false)
 
 const isOwner = computed(() => {
-  return event.value && currentUser.value && event.value.ownerId === currentUser.value.id
+      return event.value && currentUser.value && event.value.ownerId === currentUser.value.googleId
+})
+
+const hasJoined = computed(() => {
+  if (!event.value || !currentUser.value) return false
+  return event.value.players.some(p => p.id === currentUser.value.googleId)
 })
 
 const inviteLink = computed(() => {
@@ -82,6 +87,27 @@ async function copyLink () {
     // fallback
   }
 }
+
+async function handleDelete () {
+  if (!event.value || !isOwner.value) return
+  const confirmed = confirm('Are you sure you want to delete this match? All player data will be lost.')
+  if (!confirmed) return
+  await deleteEvent(event.value.id)
+  router.push('/')
+}
+
+async function handleJoin () {
+  if (!event.value || !currentUser.value) return
+  const updated = { ...event.value }
+  updated.players.push({
+    id: currentUser.value.googleId,
+    displayName: currentUser.value.displayName,
+    photoURL: currentUser.value.photoURL,
+    team: null
+  })
+  await saveEvent(updated)
+  event.value = updated
+}
 </script>
 
 <template>
@@ -107,11 +133,16 @@ async function copyLink () {
           <!-- Header -->
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
-            <button
-              v-if="isOwner && !editing"
-              class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
-              @click="startEditing"
-            >Edit</button>
+            <div v-if="isOwner && !editing" class="flex gap-2">
+              <button
+                class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
+                @click="startEditing"
+              >Edit</button>
+              <button
+                class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                @click="handleDelete"
+              >Delete</button>
+            </div>
           </div>
 
           <!-- Edit mode -->
@@ -208,6 +239,13 @@ async function copyLink () {
             <div>
               <span class="text-sm opacity-60">Players</span>
               <p class="text-white">{{ event.players.length }} / {{ event.maxPlayers }}</p>
+            </div>
+
+            <div v-if="!isOwner && !hasJoined" class="pt-4 border-t border-gray-700 text-center">
+              <button
+                class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90"
+                @click="handleJoin"
+              >Join match</button>
             </div>
 
             <!-- Invite link (owner only) -->

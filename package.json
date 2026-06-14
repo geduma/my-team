@@ -10,18 +10,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
     "vue": "^3.3.4",
     "vue-router": "^4.2.2"
   },
   "standard": {
-    "env": ["browser"]
+    "env": [
+      "browser"
+    ]
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.25",
+    "standard": "^17.1.0",
     "tailwindcss": "^3.3.2",
-    "vite": "^7.1.8",
-    "standard": "^17.1.0"
+    "vite": "^7.1.8"
   }
 }

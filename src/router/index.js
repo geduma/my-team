@@ -3,6 +3,7 @@ import Home from '../components/Home.view.vue'
 import Join from '../components/Join.view.vue'
 import Match from '../components/Match.view.vue'
 import Create from '../components/Create.view.vue'
+import Events from '../components/Events.view.vue'
 import { getCurrentUser } from '../services/db'
 
 const router = createRouter({
@@ -36,6 +37,11 @@ const router = createRouter({
       name: 'tournament',
       component: Match,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/events',
+      name: 'events',
+      component: Events
     }
   ]
 })

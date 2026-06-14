@@ -8,10 +8,10 @@ let callbackQueue = []
 function handleCredentialResponse (response) {
   const data = parseJwt(response.credential)
   const user = {
-    id: data.sub,
+    googleId: data.sub,
     displayName: data.name,
     email: data.email,
-    photoURL: data.picture
+    photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${data.sub}`
   }
   setCurrentUser(user).then(() => {
     callbackQueue.forEach(fn => fn(user))
