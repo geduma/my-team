@@ -1,0 +1,73 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { getAllEvents } from '../services/db'
+
+const events = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    events.value = await getAllEvents()
+  } catch {
+    events.value = []
+  } finally {
+    loading.value = false
+  }
+})
+</script>
+
+<template>
+  <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl">
+      <h1 class="text-center text-2xl font-bold text-[#dedcdc] sm:text-3xl">
+        All Events
+      </h1>
+
+      <div v-if="loading" class="mt-8 text-center text-[#dedcdc]">Loading...</div>
+
+      <div v-else-if="!events.length" class="mt-8 text-center">
+        <p class="text-[#dedcdc]">No events yet</p>
+        <router-link to="/" class="mt-4 inline-block text-[#0b88de] hover:underline">Go home</router-link>
+      </div>
+
+      <div v-else class="mt-8 overflow-x-auto bg-[#00000096] rounded-lg p-6">
+        <table class="w-full text-left text-sm text-[#dedcdc]">
+          <thead class="text-xs uppercase text-[#dedcdc]/60">
+            <tr class="border-b border-gray-700">
+              <th class="px-4 py-3 font-medium">ID</th>
+              <th class="px-4 py-3 font-medium">Title</th>
+              <th class="px-4 py-3 font-medium">Type</th>
+              <th class="px-4 py-3 font-medium">Date</th>
+              <th class="px-4 py-3 font-medium">Time</th>
+              <th class="px-4 py-3 font-medium">Location</th>
+              <th class="px-4 py-3 font-medium">Players</th>
+              <th class="px-4 py-3 font-medium">Owner</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <tr
+              v-for="event in events"
+              :key="event.id"
+              class="hover:bg-white/5 cursor-pointer"
+              @click="$router.push(`/match/${event.id}`)"
+            >
+              <td class="px-4 py-3 font-mono text-xs text-[#dedcdc]/60">{{ event.hash || '—' }}</td>
+              <td class="px-4 py-3 font-medium text-white">{{ event.title }}</td>
+              <td class="px-4 py-3">
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-medium"
+                  :class="event.type === 'tournament' ? 'bg-[#e34040]/20 text-[#e34040]' : 'bg-[#0b88de]/20 text-[#0b88de]'"
+                >{{ event.type === 'tournament' ? 'Tournament' : 'Match' }}</span>
+              </td>
+              <td class="px-4 py-3">{{ event.date }}</td>
+              <td class="px-4 py-3">{{ event.time }}</td>
+              <td class="px-4 py-3">{{ event.location }}</td>
+              <td class="px-4 py-3">{{ event.players.length }} / {{ event.maxPlayers }}</td>
+              <td class="px-4 py-3">{{ event.players.find(p => p.id === event.ownerId)?.displayName || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</template>

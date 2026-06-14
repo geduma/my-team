@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCurrentUser, getEvent, saveEvent } from '../services/db'
+import { getCurrentUser, getEvent, saveEvent, deleteEvent } from '../services/db'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,9 +12,15 @@ const loading = ref(true)
 const editing = ref(false)
 const error = ref('')
 const copySuccess = ref(false)
+const showDeleteModal = ref(false)
 
 const isOwner = computed(() => {
-  return event.value && currentUser.value && event.value.ownerId === currentUser.value.id
+      return event.value && currentUser.value && event.value.ownerId === currentUser.value.googleId
+})
+
+const hasJoined = computed(() => {
+  if (!event.value || !currentUser.value) return false
+  return event.value.players.some(p => p.id === currentUser.value.googleId)
 })
 
 const inviteLink = computed(() => {
@@ -82,6 +88,30 @@ async function copyLink () {
     // fallback
   }
 }
+
+function confirmDelete () {
+  showDeleteModal.value = true
+}
+
+async function handleDelete () {
+  if (!event.value || !isOwner.value) return
+  showDeleteModal.value = false
+  await deleteEvent(event.value.id)
+  router.push('/')
+}
+
+async function handleJoin () {
+  if (!event.value || !currentUser.value) return
+  const updated = { ...event.value }
+  updated.players.push({
+    id: currentUser.value.googleId,
+    displayName: currentUser.value.displayName,
+    photoURL: currentUser.value.photoURL,
+    team: null
+  })
+  await saveEvent(updated)
+  event.value = updated
+}
 </script>
 
 <template>
@@ -107,11 +137,16 @@ async function copyLink () {
           <!-- Header -->
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
-            <button
-              v-if="isOwner && !editing"
-              class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
-              @click="startEditing"
-            >Edit</button>
+            <div v-if="isOwner && !editing" class="flex gap-2">
+              <button
+                class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
+                @click="startEditing"
+              >Edit</button>
+              <button
+                class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                @click="confirmDelete"
+              >Delete</button>
+            </div>
           </div>
 
           <!-- Edit mode -->
@@ -210,6 +245,13 @@ async function copyLink () {
               <p class="text-white">{{ event.players.length }} / {{ event.maxPlayers }}</p>
             </div>
 
+            <div v-if="!isOwner && !hasJoined" class="pt-4 border-t border-gray-700 text-center">
+              <button
+                class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90"
+                @click="handleJoin"
+              >Join match</button>
+            </div>
+
             <!-- Invite link (owner only) -->
             <div v-if="isOwner" class="pt-4 border-t border-gray-700">
               <span class="text-sm opacity-60">Invite link</span>
@@ -256,4 +298,23 @@ async function copyLink () {
       </template>
     </div>
   </div>
+
+  <Teleport to="body">
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showDeleteModal = false">
+      <div class="bg-[#1a1a1a] rounded-lg p-8 shadow-xl w-80">
+        <h2 class="text-white text-lg font-semibold mb-2">Delete match</h2>
+        <p class="text-[#dedcdc] text-sm mb-6">Are you sure you want to delete this match? All player data will be lost.</p>
+        <div class="flex gap-3">
+          <button
+            class="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            @click="handleDelete"
+          >Delete</button>
+          <button
+            class="flex-1 rounded-md bg-gray-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-400"
+            @click="showDeleteModal = false"
+          >Cancel</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
