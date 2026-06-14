@@ -12,6 +12,7 @@ const loading = ref(true)
 const editing = ref(false)
 const error = ref('')
 const copySuccess = ref(false)
+const showDeleteModal = ref(false)
 
 const isOwner = computed(() => {
       return event.value && currentUser.value && event.value.ownerId === currentUser.value.googleId
@@ -88,10 +89,13 @@ async function copyLink () {
   }
 }
 
+function confirmDelete () {
+  showDeleteModal.value = true
+}
+
 async function handleDelete () {
   if (!event.value || !isOwner.value) return
-  const confirmed = confirm('Are you sure you want to delete this match? All player data will be lost.')
-  if (!confirmed) return
+  showDeleteModal.value = false
   await deleteEvent(event.value.id)
   router.push('/')
 }
@@ -140,7 +144,7 @@ async function handleJoin () {
               >Edit</button>
               <button
                 class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-                @click="handleDelete"
+                @click="confirmDelete"
               >Delete</button>
             </div>
           </div>
@@ -294,4 +298,23 @@ async function handleJoin () {
       </template>
     </div>
   </div>
+
+  <Teleport to="body">
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showDeleteModal = false">
+      <div class="bg-[#1a1a1a] rounded-lg p-8 shadow-xl w-80">
+        <h2 class="text-white text-lg font-semibold mb-2">Delete match</h2>
+        <p class="text-[#dedcdc] text-sm mb-6">Are you sure you want to delete this match? All player data will be lost.</p>
+        <div class="flex gap-3">
+          <button
+            class="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            @click="handleDelete"
+          >Delete</button>
+          <button
+            class="flex-1 rounded-md bg-gray-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-400"
+            @click="showDeleteModal = false"
+          >Cancel</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

@@ -26,27 +26,27 @@ create table public.players (
 
 create index idx_players_event_id on public.players(event_id);
 
--- permite acceso anonimo para lectura/escritura
+-- anonymous read/write access
 alter table public.events enable row level security;
 alter table public.players enable row level security;
 
-create policy "Todos pueden leer eventos"
+create policy "Anyone can read events"
   on public.events for select using (true);
 
-create policy "Todos pueden insertar eventos"
+create policy "Anyone can insert events"
   on public.events for insert with check (true);
 
-create policy "Cualquiera puede actualizar eventos"
+create policy "Anyone can update events"
   on public.events for update using (true);
 
-create policy "Cualquiera puede eliminar eventos"
+create policy "Anyone can delete events"
   on public.events for delete using (true);
 
-create policy "Todos pueden leer jugadores"
+create policy "Anyone can read players"
   on public.players for select using (true);
 
-create policy "Todos pueden insertar jugadores"
+create policy "Anyone can insert players"
   on public.players for insert with check (true);
 
-create policy "Cualquiera puede eliminar jugadores"
+create policy "Anyone can delete players"
   on public.players for delete using (true);
