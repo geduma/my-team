@@ -36,6 +36,14 @@ watch(showLogin, async (val) => {
   }
 })
 
+watch(() => route.query.login, async (val) => {
+  if (val === 'true' && !user.value) {
+    showLogin.value = true
+    await nextTick()
+    renderButton()
+  }
+})
+
 function renderButton () {
   if (signInRendered || !signInContainer.value) return
   signInRendered = true
