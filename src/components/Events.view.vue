@@ -1,11 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getAllEvents, getAllTournaments } from '../services/db'
+import { ref, computed, onMounted } from 'vue'
+import { getAllEvents, getAllTournaments, isEventExpired, getCurrentUser } from '../services/db'
 
-const events = ref([])
+const currentUser = ref(null)
+const allEvents = ref([])
 const loading = ref(true)
 
+const events = computed(() => {
+  const isSuperuser = currentUser.value?.isSuperuser === true
+  return isSuperuser
+    ? allEvents.value
+    : allEvents.value.filter(e => !isEventExpired(e))
+})
+
 onMounted(async () => {
+  currentUser.value = await getCurrentUser()
   try {
     const [matchEvents, tournaments] = await Promise.all([
       getAllEvents(),
@@ -23,14 +32,15 @@ onMounted(async () => {
       players: t.participants || [],
       maxPlayers: null,
       ownerId: t.ownerId,
+      createdAt: t.createdAt,
       _isTournament: true
     }))
 
-    events.value = [...matchEvents, ...mapped].sort((a, b) => {
+    allEvents.value = [...matchEvents, ...mapped].sort((a, b) => {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
     })
   } catch {
-    events.value = []
+    allEvents.value = []
   } finally {
     loading.value = false
   }
@@ -73,7 +83,9 @@ onMounted(async () => {
               @click="$router.push(event._isTournament ? `/preview/tournament/${event.id}` : `/preview/match/${event.id}`)"
             >
               <td class="px-4 py-3 font-mono text-xs text-[#dedcdc]/60">{{ event.hash || '—' }}</td>
-              <td class="px-4 py-3 font-medium text-white">{{ event.title }}</td>
+              <td class="px-4 py-3 font-medium text-white">{{ event.title }}
+                <span v-if="isEventExpired(event)" class="ml-2 text-xs text-red-400 border border-red-400/40 rounded-full px-1.5 py-0.5">Expired</span>
+              </td>
               <td class="px-4 py-3">
                 <span
                   class="rounded-full px-2 py-0.5 text-xs font-medium"

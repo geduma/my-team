@@ -1,5 +1,13 @@
 import { supabase } from './supabase'
 
+export const EXPIRATION_DAYS = 15
+
+export function isEventExpired (event) {
+  if (!event || !event.createdAt) return false
+  const created = new Date(event.createdAt).getTime()
+  return Date.now() - created > EXPIRATION_DAYS * 24 * 60 * 60 * 1000
+}
+
 function generateHash () {
   const bytes = new Uint8Array(6)
   crypto.getRandomValues(bytes)
@@ -153,6 +161,15 @@ export async function deleteEvent (id) {
   const { error } = await supabase
     .from('events')
     .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function renewEvent (id) {
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('events')
+    .update({ created_at: now, updated_at: now })
     .eq('id', id)
   if (error) throw error
 }
@@ -371,6 +388,15 @@ export async function deleteTournament (id) {
   const { error } = await supabase
     .from('tournaments')
     .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function renewTournament (id) {
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ created_at: now, updated_at: now })
     .eq('id', id)
   if (error) throw error
 }
