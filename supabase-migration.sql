@@ -50,3 +50,75 @@ create policy "Anyone can insert players"
 
 create policy "Anyone can delete players"
   on public.players for delete using (true);
+
+-- tournaments
+create table public.tournaments (
+  id uuid primary key default gen_random_uuid(),
+  owner_id text not null,
+  title text not null,
+  description text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table public.tournament_participants (
+  id uuid primary key default gen_random_uuid(),
+  tournament_id uuid references public.tournaments(id) on delete cascade,
+  display_name text not null,
+  team_name text not null,
+  user_id text,
+  created_at timestamptz default now()
+);
+
+create table public.tournament_matches (
+  id uuid primary key default gen_random_uuid(),
+  tournament_id uuid references public.tournaments(id) on delete cascade,
+  round integer not null,
+  home_participant_id uuid references public.tournament_participants(id),
+  away_participant_id uuid references public.tournament_participants(id),
+  home_score integer,
+  away_score integer,
+  status text default 'pending',
+  details text,
+  created_at timestamptz default now()
+);
+
+create index idx_tournament_participants_tournament_id on public.tournament_participants(tournament_id);
+create index idx_tournament_matches_tournament_id on public.tournament_matches(tournament_id);
+
+alter table public.tournaments enable row level security;
+alter table public.tournament_participants enable row level security;
+alter table public.tournament_matches enable row level security;
+
+create policy "Anyone can read tournaments"
+  on public.tournaments for select using (true);
+
+create policy "Anyone can insert tournaments"
+  on public.tournaments for insert with check (true);
+
+create policy "Anyone can update tournaments"
+  on public.tournaments for update using (true);
+
+create policy "Anyone can delete tournaments"
+  on public.tournaments for delete using (true);
+
+create policy "Anyone can read tournament_participants"
+  on public.tournament_participants for select using (true);
+
+create policy "Anyone can insert tournament_participants"
+  on public.tournament_participants for insert with check (true);
+
+create policy "Anyone can delete tournament_participants"
+  on public.tournament_participants for delete using (true);
+
+create policy "Anyone can read tournament_matches"
+  on public.tournament_matches for select using (true);
+
+create policy "Anyone can insert tournament_matches"
+  on public.tournament_matches for insert with check (true);
+
+create policy "Anyone can update tournament_matches"
+  on public.tournament_matches for update using (true);
+
+create policy "Anyone can delete tournament_matches"
+  on public.tournament_matches for delete using (true);

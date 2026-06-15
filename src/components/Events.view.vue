@@ -1,13 +1,34 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getAllEvents } from '../services/db'
+import { getAllEvents, getAllTournaments } from '../services/db'
 
 const events = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
   try {
-    events.value = await getAllEvents()
+    const [matchEvents, tournaments] = await Promise.all([
+      getAllEvents(),
+      getAllTournaments()
+    ])
+
+    const mapped = tournaments.map(t => ({
+      id: t.id,
+      hash: null,
+      title: t.title,
+      type: 'tournament',
+      date: null,
+      time: null,
+      location: null,
+      players: t.participants || [],
+      maxPlayers: null,
+      ownerId: t.ownerId,
+      _isTournament: true
+    }))
+
+    events.value = [...matchEvents, ...mapped].sort((a, b) => {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    })
   } catch {
     events.value = []
   } finally {
@@ -49,7 +70,7 @@ onMounted(async () => {
               v-for="event in events"
               :key="event.id"
               class="hover:bg-white/5 cursor-pointer"
-              @click="$router.push(`/match/${event.id}`)"
+              @click="$router.push(event._isTournament ? `/tournament/${event.id}` : `/match/${event.id}`)"
             >
               <td class="px-4 py-3 font-mono text-xs text-[#dedcdc]/60">{{ event.hash || '—' }}</td>
               <td class="px-4 py-3 font-medium text-white">{{ event.title }}</td>
@@ -59,10 +80,10 @@ onMounted(async () => {
                   :class="event.type === 'tournament' ? 'bg-[#e34040]/20 text-[#e34040]' : 'bg-[#0b88de]/20 text-[#0b88de]'"
                 >{{ event.type === 'tournament' ? 'Tournament' : 'Match' }}</span>
               </td>
-              <td class="px-4 py-3">{{ event.date }}</td>
-              <td class="px-4 py-3">{{ event.time }}</td>
-              <td class="px-4 py-3">{{ event.location }}</td>
-              <td class="px-4 py-3">{{ event.players.length }} / {{ event.maxPlayers }}</td>
+              <td class="px-4 py-3">{{ event.date || '—' }}</td>
+              <td class="px-4 py-3">{{ event.time || '—' }}</td>
+              <td class="px-4 py-3">{{ event.location || '—' }}</td>
+              <td class="px-4 py-3">{{ event._isTournament ? event.players.length : `${event.players.length} / ${event.maxPlayers}` }}</td>
               <td class="px-4 py-3">{{ event.players.find(p => p.id === event.ownerId)?.displayName || '—' }}</td>
             </tr>
           </tbody>

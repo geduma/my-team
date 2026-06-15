@@ -272,7 +272,7 @@ async function handleJoin () {
             <!-- Players list -->
             <div class="pt-4 border-t border-gray-700">
               <span class="text-sm opacity-60">Confirmed players</span>
-              <div class="mt-2 space-y-2">
+              <div class="mt-2 max-h-[300px] overflow-y-auto space-y-2 pr-1">
                 <div
                   v-for="player in event.players"
                   :key="player.id"
@@ -284,11 +284,11 @@ async function handleJoin () {
                     :alt="player.displayName"
                     class="w-8 h-8 rounded-full"
                   />
-                  <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs" v-else>
+                  <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs shrink-0" v-else>
                     {{ player.displayName?.charAt(0) }}
                   </div>
-                  <span class="text-white text-sm">{{ player.displayName }}</span>
-                  <span v-if="player.id === event.ownerId" class="text-xs text-[#64e34f] ml-auto">Owner</span>
+                  <span class="text-white text-sm truncate">{{ player.displayName }}</span>
+                  <span v-if="player.id === event.ownerId" class="text-xs text-[#64e34f] ml-auto shrink-0">Owner</span>
                 </div>
                 <p v-if="!event.players.length" class="text-sm opacity-60">No players yet</p>
               </div>
