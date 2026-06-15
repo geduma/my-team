@@ -37,7 +37,7 @@ async function mapEvent (row) {
   }
 }
 
-function toSnake (event) {
+export function toSnake (event) {
   return {
     id: event.id,
     hash: event.hash,

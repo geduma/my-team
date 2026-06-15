@@ -139,10 +139,18 @@ const team2 = computed(() => lineupPlayers.value.filter(p => p.team === 'team2')
 
 async function openLineup () {
   showLineup.value = true
-  const fresh = await getEvent(event.value.id)
-  if (fresh) {
-    event.value = fresh
-    lineupPlayers.value = fresh.players.map(p => ({ ...p }))
+  try {
+    const fresh = await getEvent(event.value?.id)
+    if (fresh) {
+      event.value = fresh
+      lineupPlayers.value = fresh.players.map(p => ({ ...p }))
+    } else if (event.value) {
+      lineupPlayers.value = event.value.players.map(p => ({ ...p }))
+    }
+  } catch {
+    if (event.value) {
+      lineupPlayers.value = event.value.players.map(p => ({ ...p }))
+    }
   }
   const hasTeams = lineupPlayers.value.some(p => p.team === 'team1' || p.team === 'team2')
   if (!hasTeams && lineupPlayers.value.length > 0) {

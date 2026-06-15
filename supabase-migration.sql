@@ -51,6 +51,9 @@ create policy "Anyone can insert players"
 create policy "Anyone can delete players"
   on public.players for delete using (true);
 
+create policy "Anyone can update players"
+  on public.players for update using (true);
+
 -- tournaments
 create table public.tournaments (
   id uuid primary key default gen_random_uuid(),
