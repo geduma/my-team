@@ -34,14 +34,15 @@ const inviteLink = computed(() => {
 })
 
 const isTournament = computed(() => route.name === 'tournament')
+const isPreview = computed(() => route.meta.preview === true)
 
 onMounted(async () => {
   currentUser.value = await getCurrentUser()
-  if (!currentUser.value) {
+  if (!currentUser.value && !isPreview.value) {
     router.push('/')
     return
   }
-  if (isTournament.value) {
+  if (!isPreview.value && isTournament.value) {
     loading.value = false
     return
   }
@@ -226,7 +227,8 @@ function getPosition (index, total, zone, orientation) {
           <!-- Header -->
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
-            <div v-if="isOwner && !editing" class="flex gap-2">
+            <div v-if="isPreview" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5">Preview</div>
+            <div v-if="isOwner && !editing && !isPreview" class="flex gap-2">
               <button
                 class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
                 @click="startEditing"
@@ -340,7 +342,7 @@ function getPosition (index, total, zone, orientation) {
               >View Lineup</button>
             </div>
 
-            <div v-if="!isOwner && !hasJoined" class="pt-4 border-t border-gray-700 text-center">
+            <div v-if="!isOwner && !hasJoined && !isPreview" class="pt-4 border-t border-gray-700 text-center">
               <button
                 class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90 disabled:opacity-50"
                 :disabled="joining"
@@ -386,7 +388,7 @@ function getPosition (index, total, zone, orientation) {
                   <span class="text-white text-sm truncate">{{ player.displayName }}</span>
                   <span v-if="player.id === event.ownerId" class="text-xs text-[#64e34f] ml-auto shrink-0">Owner</span>
                   <button
-                    v-if="isOwner && player.id !== event.ownerId"
+                    v-if="isOwner && player.id !== event.ownerId && !isPreview"
                     class="ml-auto text-xs text-red-400 hover:text-red-300 shrink-0 disabled:opacity-50"
                     :disabled="removingPlayer"
                     @click="handleRemovePlayer(player.id)"
@@ -446,7 +448,7 @@ function getPosition (index, total, zone, orientation) {
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
               :style="getPosition(i, team1.length, 'left', 'landscape')"
-              @click="isOwner ? handleSwapPlayer(p.id, 'team2') : null"
+              @click="isOwner && !isPreview ? handleSwapPlayer(p.id, 'team2') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
               <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
@@ -458,7 +460,7 @@ function getPosition (index, total, zone, orientation) {
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
               :style="getPosition(i, team2.length, 'right', 'landscape')"
-              @click="isOwner ? handleSwapPlayer(p.id, 'team1') : null"
+              @click="isOwner && !isPreview ? handleSwapPlayer(p.id, 'team1') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
               <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
@@ -481,7 +483,7 @@ function getPosition (index, total, zone, orientation) {
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
               :style="getPosition(i, team1.length, 'bottom', 'portrait')"
-              @click="isOwner ? handleSwapPlayer(p.id, 'team2') : null"
+              @click="isOwner && !isPreview ? handleSwapPlayer(p.id, 'team2') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
               <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
@@ -493,7 +495,7 @@ function getPosition (index, total, zone, orientation) {
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
               :style="getPosition(i, team2.length, 'top', 'portrait')"
-              @click="isOwner ? handleSwapPlayer(p.id, 'team1') : null"
+              @click="isOwner && !isPreview ? handleSwapPlayer(p.id, 'team1') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
               <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
@@ -515,14 +517,14 @@ function getPosition (index, total, zone, orientation) {
         </div>
 
         <!-- Owner controls -->
-        <div v-if="isOwner" class="flex justify-center mt-4">
+        <div v-if="isOwner && !isPreview" class="flex justify-center mt-4">
           <button
             class="rounded-md bg-[#0b88de] px-6 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3] disabled:opacity-50"
             :disabled="shuffling"
             @click="handleShuffle"
           >{{ shuffling ? 'Shuffling...' : 'Shuffle' }}</button>
         </div>
-        <p v-if="isOwner" class="text-xs text-[#dedcdc] text-center mt-2">Click a player to move them to the other team</p>
+        <p v-if="isOwner && !isPreview" class="text-xs text-[#dedcdc] text-center mt-2">Click a player to move them to the other team</p>
       </div>
     </div>
   </Teleport>

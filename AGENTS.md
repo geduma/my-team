@@ -92,6 +92,8 @@ npx standard     # lint con StandardJS
 | `/match/:id` | Match.view | Sí |
 | `/tournament` | Tournament.view | Sí |
 | `/tournament/:id` | Tournament.view | Sí |
+| `/preview/match/:id` | Match.view | No (preview) |
+| `/preview/tournament/:id` | Tournament.view | No (preview) |
 | `/events` | Events.view | No |
 
 ### Navegación protegida

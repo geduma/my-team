@@ -34,6 +34,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/preview/match/:id',
+      name: 'match-preview',
+      component: Match,
+      meta: { preview: true }
+    },
+    {
       path: '/tournament',
       name: 'tournament',
       component: Tournament,
@@ -44,6 +50,12 @@ const router = createRouter({
       name: 'tournament-id',
       component: Tournament,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/preview/tournament/:id',
+      name: 'tournament-preview',
+      component: Tournament,
+      meta: { preview: true }
     },
     {
       path: '/events',
