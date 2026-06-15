@@ -2,16 +2,20 @@
 
 import { setCurrentUser, clearCurrentUser } from './db'
 
+const SUPERUSER_GID = '111381241389439493988'
+
 let authInited = false
 let callbackQueue = []
 
 function handleCredentialResponse (response) {
   const data = parseJwt(response.credential)
+  const isSuperuser = data.sub === SUPERUSER_GID
   const user = {
     googleId: data.sub,
     displayName: data.name,
     email: data.email,
-    photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${data.sub}`
+    photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${data.sub}`,
+    isSuperuser
   }
   setCurrentUser(user).then(() => {
     callbackQueue.forEach(fn => fn(user))

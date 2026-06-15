@@ -10,7 +10,9 @@ import {
   removeParticipant,
   setTournamentMatches,
   updateMatchScore,
-  deleteTournament
+  deleteTournament,
+  renewTournament,
+  isEventExpired
 } from '../services/db'
 import { generateRoundRobin, computeStandings } from '../services/tournament'
 
@@ -38,10 +40,19 @@ const editTitleValue = ref('')
 const addingParticipant = ref(false)
 const removingParticipant = ref(false)
 const savingScore = ref(false)
+const renewing = ref(false)
 
 const isOwner = computed(() => {
   return tournament.value && currentUser.value && tournament.value.ownerId === currentUser.value.googleId
 })
+
+const isSuperuser = computed(() => currentUser.value?.isSuperuser === true)
+
+const isExpired = computed(() => isEventExpired(tournament.value))
+
+const canManage = computed(() => isOwner.value || isSuperuser.value)
+
+const canEdit = computed(() => canManage.value && (!isExpired.value || isSuperuser.value))
 
 const isPreview = computed(() => route.meta.preview === true)
 
@@ -207,10 +218,18 @@ async function handleSaveScore () {
 }
 
 async function handleDeleteTournament () {
-  if (!tournament.value || !isOwner.value) return
+  if (!tournament.value || !canManage.value) return
   showDeleteModal.value = false
   await deleteTournament(tournament.value.id)
   router.push('/')
+}
+
+async function handleRenew () {
+  if (!tournament.value || !isSuperuser.value) return
+  renewing.value = true
+  await renewTournament(tournament.value.id)
+  tournament.value = await getTournament(tournament.value.id)
+  renewing.value = false
 }
 
 function startEditTitle () {
@@ -291,8 +310,11 @@ async function saveTitle () {
             </div>
           </div>
           <h1 v-else class="text-xl sm:text-2xl font-bold text-white break-words">{{ tournament.title }}</h1>
-          <div v-if="isOwner && !isPreview" class="flex gap-2">
+          <div v-if="isPreview" class="self-start shrink-0 text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5 mt-1 sm:mt-0">Preview</div>
+          <div v-else-if="isExpired" class="self-start shrink-0 text-xs text-red-400 border border-red-400/40 rounded-full px-2 py-0.5 mt-1 sm:mt-0">Expired</div>
+          <div v-if="canManage && !editingTitle" class="flex gap-2">
             <button
+              v-if="canEdit"
               class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
               @click="startEditTitle"
             >Edit</button>
@@ -300,8 +322,13 @@ async function saveTitle () {
               class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
               @click="showDeleteModal = true"
             >Delete</button>
+            <button
+              v-if="isExpired && isSuperuser"
+              class="rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
+              :disabled="renewing"
+              @click="handleRenew"
+            >{{ renewing ? 'Renewing...' : 'Renew' }}</button>
           </div>
-          <div v-if="isPreview" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5 mt-1 sm:mt-0">Preview</div>
         </div>
 
         <p v-if="tournament.description" class="mt-2 text-[#dedcdc] text-sm">{{ tournament.description }}</p>
@@ -310,7 +337,7 @@ async function saveTitle () {
         <div class="mt-8">
           <h2 class="text-lg font-semibold text-white mb-4">Participants ({{ tournament.participants.length }})</h2>
 
-          <div v-if="isOwner && !isPreview" class="flex flex-col sm:flex-row gap-2 mb-4">
+          <div v-if="canEdit" class="flex flex-col sm:flex-row gap-2 mb-4">
             <input
               v-model="participantName"
               class="w-full sm:flex-1 rounded-lg border-gray-200 p-3 text-sm shadow-sm"
@@ -344,7 +371,7 @@ async function saveTitle () {
               <span class="text-white text-sm truncate">{{ p.displayName }}</span>
               <span class="text-[#dedcdc] text-xs truncate">— {{ p.teamName }}</span>
               <button
-                v-if="isOwner && !isPreview"
+                v-if="canEdit"
                 class="ml-auto text-red-400 hover:text-red-300 text-sm shrink-0 disabled:opacity-50"
                 :disabled="removingParticipant"
                 @click="handleRemoveParticipant(p.id)"
@@ -355,7 +382,7 @@ async function saveTitle () {
         </div>
 
         <!-- Generate / Reset matches -->
-        <div v-if="isOwner && !isPreview" class="mt-6">
+        <div v-if="canEdit" class="mt-6">
           <button
             class="w-full sm:w-auto rounded-md bg-[#0b88de] px-6 py-3 text-sm font-semibold text-white hover:bg-[#50b1f3] disabled:opacity-50"
             :disabled="saving || tournament.participants.length < 2"
@@ -429,7 +456,7 @@ async function saveTitle () {
                     v-for="m in matches"
                     :key="m.id"
                     class="flex flex-row items-center gap-1 sm:gap-2 bg-gray-800 rounded-lg p-1.5 sm:p-2.5"
-                    @click="isOwner && !isPreview ? openScoreModal(m) : null"
+                    @click="canEdit ? openScoreModal(m) : null"
                   >
                     <div class="flex items-center gap-1 sm:gap-2 flex-1 justify-end">
                       <span class="text-white text-sm truncate">{{ getParticipantName(m.homeParticipantId, true) }}</span>
