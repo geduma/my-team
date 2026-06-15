@@ -70,7 +70,7 @@ onMounted(async () => {
               v-for="event in events"
               :key="event.id"
               class="hover:bg-white/5 cursor-pointer"
-              @click="$router.push(event._isTournament ? `/tournament/${event.id}` : `/match/${event.id}`)"
+              @click="$router.push(event._isTournament ? `/preview/tournament/${event.id}` : `/preview/match/${event.id}`)"
             >
               <td class="px-4 py-3 font-mono text-xs text-[#dedcdc]/60">{{ event.hash || '—' }}</td>
               <td class="px-4 py-3 font-medium text-white">{{ event.title }}</td>
