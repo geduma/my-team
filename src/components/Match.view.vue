@@ -175,26 +175,29 @@ async function handleSwapPlayer (playerId, toTeam) {
   await setPlayerTeam(event.value.id, playerId, toTeam)
   const p = lineupPlayers.value.find(p => p.id === playerId)
   if (p) p.team = toTeam
+  const ep = event.value.players.find(p => p.id === playerId)
+  if (ep) ep.team = toTeam
 }
 
-function getRandomPosition (index, total, zone, orientation) {
-  const cols = Math.ceil(Math.sqrt(total * 1.5))
+function getPosition (index, total, zone, orientation) {
+  const cols = Math.min(Math.ceil(Math.sqrt(total)), 4)
   const rows = Math.ceil(total / cols)
   const col = index % cols
   const row = Math.floor(index / cols)
 
   if (orientation === 'portrait') {
-    const cellW = 80 / cols
-    const cellH = 80 / rows
-    const x = 10 + col * cellW + cellW * 0.1 + Math.random() * cellW * 0.5
-    const yBase = zone === 'top' ? 5 : 50 + 5
-    const y = yBase + row * cellH + cellH * 0.15 + Math.random() * cellH * 0.5
+    const cellW = 70 / cols
+    const cellH = 40 / rows
+    const x = 15 + col * cellW + cellW * 0.15
+    const yBase = zone === 'top' ? 5 : 55
+    const y = yBase + row * cellH + cellH * 0.15
     return { left: `${x}%`, top: `${y}%` }
   } else {
-    const cellW = 80 / cols
-    const cellH = 80 / rows
-    const x = zone === 'left' ? 5 + col * cellW + cellW * 0.15 + Math.random() * cellW * 0.5 : 50 + 5 + col * cellW + cellW * 0.15 + Math.random() * cellW * 0.5
-    const y = 5 + row * cellH + cellH * 0.15 + Math.random() * cellH * 0.5
+    const cellW = 40 / cols
+    const cellH = 75 / rows
+    const xBase = zone === 'left' ? 5 : 55
+    const x = xBase + col * cellW + cellW * 0.15
+    const y = 5 + row * cellH + cellH * 0.15
     return { left: `${x}%`, top: `${y}%` }
   }
 }
@@ -442,7 +445,7 @@ function getRandomPosition (index, total, zone, orientation) {
           <template v-for="(p, i) in team1" :key="p.id">
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
-              :style="getRandomPosition(i, team1.length, 'left', 'landscape')"
+              :style="getPosition(i, team1.length, 'left', 'landscape')"
               @click="isOwner ? handleSwapPlayer(p.id, 'team2') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
@@ -454,7 +457,7 @@ function getRandomPosition (index, total, zone, orientation) {
           <template v-for="(p, i) in team2" :key="p.id">
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
-              :style="getRandomPosition(i, team2.length, 'right', 'landscape')"
+              :style="getPosition(i, team2.length, 'right', 'landscape')"
               @click="isOwner ? handleSwapPlayer(p.id, 'team1') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
@@ -477,7 +480,7 @@ function getRandomPosition (index, total, zone, orientation) {
           <template v-for="(p, i) in team1" :key="p.id">
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
-              :style="getRandomPosition(i, team1.length, 'bottom', 'portrait')"
+              :style="getPosition(i, team1.length, 'bottom', 'portrait')"
               @click="isOwner ? handleSwapPlayer(p.id, 'team2') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
@@ -489,7 +492,7 @@ function getRandomPosition (index, total, zone, orientation) {
           <template v-for="(p, i) in team2" :key="p.id">
             <div
               class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
-              :style="getRandomPosition(i, team2.length, 'top', 'portrait')"
+              :style="getPosition(i, team2.length, 'top', 'portrait')"
               @click="isOwner ? handleSwapPlayer(p.id, 'team1') : null"
             >
               <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
