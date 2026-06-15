@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCurrentUser, getEvent, saveEvent, deleteEvent } from '../services/db'
+import { getCurrentUser, getEvent, saveEvent, deleteEvent, setPlayerTeam, shuffleTeams, removePlayerFromEvent } from '../services/db'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +13,11 @@ const editing = ref(false)
 const error = ref('')
 const copySuccess = ref(false)
 const showDeleteModal = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
+const joining = ref(false)
+const shuffling = ref(false)
+const removingPlayer = ref(false)
 
 const isOwner = computed(() => {
       return event.value && currentUser.value && event.value.ownerId === currentUser.value.googleId
@@ -75,7 +80,9 @@ function cancelEditing () {
 
 async function saveChanges () {
   if (!event.value) return
+  saving.value = true
   await saveEvent(event.value)
+  saving.value = false
   editing.value = false
 }
 
@@ -96,12 +103,14 @@ function confirmDelete () {
 async function handleDelete () {
   if (!event.value || !isOwner.value) return
   showDeleteModal.value = false
+  deleting.value = true
   await deleteEvent(event.value.id)
   router.push('/')
 }
 
 async function handleJoin () {
   if (!event.value || !currentUser.value) return
+  joining.value = true
   const updated = { ...event.value }
   updated.players.push({
     id: currentUser.value.googleId,
@@ -111,6 +120,86 @@ async function handleJoin () {
   })
   await saveEvent(updated)
   event.value = updated
+  joining.value = false
+}
+
+async function handleRemovePlayer (userId) {
+  if (!event.value || !isOwner.value) return
+  removingPlayer.value = true
+  await removePlayerFromEvent(event.value.id, userId)
+  event.value = await getEvent(event.value.id)
+  removingPlayer.value = false
+}
+
+const showLineup = ref(false)
+const lineupPlayers = ref([])
+
+const team1 = computed(() => lineupPlayers.value.filter(p => p.team === 'team1'))
+const team2 = computed(() => lineupPlayers.value.filter(p => p.team === 'team2'))
+
+async function openLineup () {
+  showLineup.value = true
+  try {
+    const fresh = await getEvent(event.value?.id)
+    if (fresh) {
+      event.value = fresh
+      lineupPlayers.value = fresh.players.map(p => ({ ...p }))
+    } else if (event.value) {
+      lineupPlayers.value = event.value.players.map(p => ({ ...p }))
+    }
+  } catch {
+    if (event.value) {
+      lineupPlayers.value = event.value.players.map(p => ({ ...p }))
+    }
+  }
+  const hasTeams = lineupPlayers.value.some(p => p.team === 'team1' || p.team === 'team2')
+  if (!hasTeams && lineupPlayers.value.length > 0) {
+    await handleShuffle()
+  }
+}
+
+async function handleShuffle () {
+  if (!event.value) return
+  shuffling.value = true
+  await shuffleTeams(event.value.id)
+  const updated = await getEvent(event.value.id)
+  if (updated) {
+    event.value = updated
+    lineupPlayers.value = updated.players.map(p => ({ ...p }))
+  }
+  shuffling.value = false
+}
+
+async function handleSwapPlayer (playerId, toTeam) {
+  if (!event.value || !isOwner.value) return
+  await setPlayerTeam(event.value.id, playerId, toTeam)
+  const p = lineupPlayers.value.find(p => p.id === playerId)
+  if (p) p.team = toTeam
+  const ep = event.value.players.find(p => p.id === playerId)
+  if (ep) ep.team = toTeam
+}
+
+function getPosition (index, total, zone, orientation) {
+  const cols = Math.min(Math.ceil(Math.sqrt(total)), 4)
+  const rows = Math.ceil(total / cols)
+  const col = index % cols
+  const row = Math.floor(index / cols)
+
+  if (orientation === 'portrait') {
+    const cellW = 70 / cols
+    const cellH = 40 / rows
+    const x = 15 + col * cellW + cellW * 0.15
+    const yBase = zone === 'top' ? 5 : 55
+    const y = yBase + row * cellH + cellH * 0.15
+    return { left: `${x}%`, top: `${y}%` }
+  } else {
+    const cellW = 40 / cols
+    const cellH = 75 / rows
+    const xBase = zone === 'left' ? 5 : 55
+    const x = xBase + col * cellW + cellW * 0.15
+    const y = 5 + row * cellH + cellH * 0.15
+    return { left: `${x}%`, top: `${y}%` }
+  }
 }
 </script>
 
@@ -210,9 +299,10 @@ async function handleJoin () {
             </div>
             <div class="flex gap-3">
               <button
-                class="rounded-md bg-[#64e34f] px-5 py-2 text-sm font-semibold text-black hover:opacity-90"
+                class="rounded-md bg-[#64e34f] px-5 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
+                :disabled="saving"
                 @click="saveChanges"
-              >Save</button>
+              >{{ saving ? 'Saving...' : 'Save' }}</button>
               <button
                 class="rounded-md bg-gray-500 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-400"
                 @click="cancelEditing"
@@ -243,13 +333,19 @@ async function handleJoin () {
             <div>
               <span class="text-sm opacity-60">Players</span>
               <p class="text-white">{{ event.players.length }} / {{ event.maxPlayers }}</p>
+              <button
+                v-if="event.players.length"
+                class="mt-2 rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90"
+                @click="openLineup"
+              >View Lineup</button>
             </div>
 
             <div v-if="!isOwner && !hasJoined" class="pt-4 border-t border-gray-700 text-center">
               <button
-                class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90"
+                class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90 disabled:opacity-50"
+                :disabled="joining"
                 @click="handleJoin"
-              >Join match</button>
+              >{{ joining ? 'Joining...' : 'Join match' }}</button>
             </div>
 
             <!-- Invite link (owner only) -->
@@ -272,7 +368,7 @@ async function handleJoin () {
             <!-- Players list -->
             <div class="pt-4 border-t border-gray-700">
               <span class="text-sm opacity-60">Confirmed players</span>
-              <div class="mt-2 space-y-2">
+              <div class="mt-2 max-h-[300px] overflow-y-auto space-y-2 pr-1">
                 <div
                   v-for="player in event.players"
                   :key="player.id"
@@ -284,11 +380,17 @@ async function handleJoin () {
                     :alt="player.displayName"
                     class="w-8 h-8 rounded-full"
                   />
-                  <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs" v-else>
+                  <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs shrink-0" v-else>
                     {{ player.displayName?.charAt(0) }}
                   </div>
-                  <span class="text-white text-sm">{{ player.displayName }}</span>
-                  <span v-if="player.id === event.ownerId" class="text-xs text-[#64e34f] ml-auto">Owner</span>
+                  <span class="text-white text-sm truncate">{{ player.displayName }}</span>
+                  <span v-if="player.id === event.ownerId" class="text-xs text-[#64e34f] ml-auto shrink-0">Owner</span>
+                  <button
+                    v-if="isOwner && player.id !== event.ownerId"
+                    class="ml-auto text-xs text-red-400 hover:text-red-300 shrink-0 disabled:opacity-50"
+                    :disabled="removingPlayer"
+                    @click="handleRemovePlayer(player.id)"
+                  >{{ removingPlayer ? '...' : 'Remove' }}</button>
                 </div>
                 <p v-if="!event.players.length" class="text-sm opacity-60">No players yet</p>
               </div>
@@ -306,14 +408,121 @@ async function handleJoin () {
         <p class="text-[#dedcdc] text-sm mb-6">Are you sure you want to delete this match? All player data will be lost.</p>
         <div class="flex gap-3">
           <button
-            class="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            class="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+            :disabled="deleting"
             @click="handleDelete"
-          >Delete</button>
+          >{{ deleting ? 'Deleting...' : 'Delete' }}</button>
           <button
             class="flex-1 rounded-md bg-gray-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-400"
             @click="showDeleteModal = false"
           >Cancel</button>
         </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div v-if="showLineup" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showLineup = false">
+      <div class="bg-[#1a1a1a] rounded-lg p-6 shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-white text-lg font-semibold">Lineup</h2>
+          <button
+            class="text-[#dedcdc] hover:text-white text-xl leading-none"
+            @click="showLineup = false"
+          >&times;</button>
+        </div>
+
+        <!-- Soccer field — desktop landscape -->
+        <div class="hidden md:block relative w-full aspect-[3/2] bg-green-700 rounded-lg border-2 border-white/30 overflow-hidden">
+          <div class="absolute left-1/2 top-0 w-0.5 h-full bg-white/40"></div>
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full border-2 border-white/40"></div>
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/60"></div>
+          <div class="absolute left-0 top-1/2 -translate-y-1/2 w-16 h-36 border-2 border-white/30 border-l-0"></div>
+          <div class="absolute right-0 top-1/2 -translate-y-1/2 w-16 h-36 border-2 border-white/30 border-r-0"></div>
+          <div class="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-16 border-2 border-white/40 border-l-0 bg-white/5"></div>
+          <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-16 border-2 border-white/40 border-r-0 bg-white/5"></div>
+
+          <template v-for="(p, i) in team1" :key="p.id">
+            <div
+              class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
+              :style="getPosition(i, team1.length, 'left', 'landscape')"
+              @click="isOwner ? handleSwapPlayer(p.id, 'team2') : null"
+            >
+              <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+              <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
+              <span class="text-xs text-white font-semibold bg-black/50 px-1 rounded whitespace-nowrap">{{ p.displayName }}</span>
+            </div>
+          </template>
+
+          <template v-for="(p, i) in team2" :key="p.id">
+            <div
+              class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
+              :style="getPosition(i, team2.length, 'right', 'landscape')"
+              @click="isOwner ? handleSwapPlayer(p.id, 'team1') : null"
+            >
+              <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+              <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
+              <span class="text-xs text-white font-semibold bg-black/50 px-1 rounded whitespace-nowrap">{{ p.displayName }}</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Soccer field — mobile portrait -->
+        <div class="block md:hidden relative w-full aspect-[2/3] bg-green-700 rounded-lg border-2 border-white/30 overflow-hidden">
+          <div class="absolute top-1/2 left-0 h-0.5 w-full bg-white/40"></div>
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full border-2 border-white/40"></div>
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/60"></div>
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 h-16 w-36 border-2 border-white/30 border-t-0"></div>
+          <div class="absolute bottom-0 left-1/2 -translate-x-1/2 h-16 w-36 border-2 border-white/30 border-b-0"></div>
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 h-3 w-16 border-2 border-white/40 border-t-0 bg-white/5"></div>
+          <div class="absolute bottom-0 left-1/2 -translate-x-1/2 h-3 w-16 border-2 border-white/40 border-b-0 bg-white/5"></div>
+
+          <template v-for="(p, i) in team1" :key="p.id">
+            <div
+              class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
+              :style="getPosition(i, team1.length, 'bottom', 'portrait')"
+              @click="isOwner ? handleSwapPlayer(p.id, 'team2') : null"
+            >
+              <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+              <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
+              <span class="text-xs text-white font-semibold bg-black/50 px-1 rounded whitespace-nowrap">{{ p.displayName }}</span>
+            </div>
+          </template>
+
+          <template v-for="(p, i) in team2" :key="p.id">
+            <div
+              class="absolute flex flex-col items-center gap-0.5 cursor-pointer z-10"
+              :style="getPosition(i, team2.length, 'top', 'portrait')"
+              @click="isOwner ? handleSwapPlayer(p.id, 'team1') : null"
+            >
+              <img v-if="p.photoURL" :src="p.photoURL" :alt="p.displayName" class="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+              <div v-else class="w-8 h-8 rounded-full bg-gray-600 border-2 border-white flex items-center justify-center text-xs text-white shadow-md">{{ p.displayName?.charAt(0) }}</div>
+              <span class="text-xs text-white font-semibold bg-black/50 px-1 rounded whitespace-nowrap">{{ p.displayName }}</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Teams info -->
+        <div class="flex justify-between mt-4 text-sm text-[#dedcdc]">
+          <div>
+            <span class="text-white font-semibold">Team 1</span>
+            <span class="ml-1">({{ team1.length }})</span>
+          </div>
+          <div>
+            <span class="text-white font-semibold">Team 2</span>
+            <span class="ml-1">({{ team2.length }})</span>
+          </div>
+        </div>
+
+        <!-- Owner controls -->
+        <div v-if="isOwner" class="flex justify-center mt-4">
+          <button
+            class="rounded-md bg-[#0b88de] px-6 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3] disabled:opacity-50"
+            :disabled="shuffling"
+            @click="handleShuffle"
+          >{{ shuffling ? 'Shuffling...' : 'Shuffle' }}</button>
+        </div>
+        <p v-if="isOwner" class="text-xs text-[#dedcdc] text-center mt-2">Click a player to move them to the other team</p>
       </div>
     </div>
   </Teleport>

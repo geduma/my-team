@@ -4,6 +4,7 @@ import Join from '../components/Join.view.vue'
 import Match from '../components/Match.view.vue'
 import Create from '../components/Create.view.vue'
 import Events from '../components/Events.view.vue'
+import Tournament from '../components/Tournament.view.vue'
 import { getCurrentUser } from '../services/db'
 
 const router = createRouter({
@@ -35,7 +36,13 @@ const router = createRouter({
     {
       path: '/tournament',
       name: 'tournament',
-      component: Match,
+      component: Tournament,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/tournament/:id',
+      name: 'tournament-id',
+      component: Tournament,
       meta: { requiresAuth: true }
     },
     {

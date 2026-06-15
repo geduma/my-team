@@ -18,6 +18,8 @@
 npm run dev      # servidor de desarrollo Vite
 npm run build    # build producción
 npm run preview  # preview del build
+npm run test     # ejecutar tests (vitest run)
+npm run test:watch # tests en modo watch
 npx standard     # lint con StandardJS
 ```
 
@@ -52,7 +54,8 @@ npx standard     # lint con StandardJS
 - Cliente en `src/services/supabase.js`
 - Variables de entorno: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 - Tabla `events` con snake_case columns (owner_id, max_players, created_at, updated_at)
-- Tabla `players` con FK a `events(id)`, on delete cascade
+- Tabla `players` con FK a `events(id)`, on delete cascade. Columna `team` (`'team1'`, `'team2'` o `null`)
+- Tablas de torneo: `tournaments`, `tournament_participants`, `tournament_matches`
 - RLS activado con policies públicas (select/insert/update/delete para todos)
 - Mapeo camelCase ↔ snake_case en `src/services/db.js` mediante `mapEvent()` y `toSnake()`
 - Los componentes reciben objetos en camelCase con array `players` embebido
@@ -87,7 +90,8 @@ npx standard     # lint con StandardJS
 | `/create` | Create.view | Sí |
 | `/join/:hash` | Join.view | Sí |
 | `/match/:id` | Match.view | Sí |
-| `/tournament` | Match.view | Sí |
+| `/tournament` | Tournament.view | Sí |
+| `/tournament/:id` | Tournament.view | Sí |
 | `/events` | Events.view | No |
 
 ### Navegación protegida
@@ -107,13 +111,15 @@ src/
 │   ├── Create.view.vue
 │   ├── Join.view.vue
 │   ├── Match.view.vue
+│   ├── Tournament.view.vue
 │   └── Events.view.vue
 ├── router/
 │   └── index.js
 └── services/
     ├── auth.js        # Google Auth (GIS)
     ├── db.js           # Supabase + IndexedDB (session)
-    └── supabase.js     # Supabase client
+    ├── supabase.js     # Supabase client
+    └── tournament.js   # Round-robin algorithm
 ```
 
 ## Reglas para AI Agents
