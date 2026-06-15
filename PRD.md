@@ -31,6 +31,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | F8 | **Cancha visual** | Diagrama de cancha con posiciones de jugadores (11 vs 11 o según número de jugadores). |
 | F9 | **Edición manual de equipos** | El organizador puede hacer clic en un jugador para moverlo al otro equipo. |
 | F10 | **Torneo round-robin** | Creación y gestión de torneos con sistema round-robin, tabla de posiciones (3-1-0), y generación de partidos. |
+| F11 | **Preview público** | Rutas `/preview/match/:id` y `/preview/tournament/:id` sin autenticación, ocultando todos los elementos interactivos (Edit, Delete, Join, Shuffle, Remove, score modal, etc.). Badge "Preview" visible en el header. |
 
 ### Fase 2 (futuro)
 
@@ -68,8 +69,10 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | `/create` | Create.view | Sí | Formulario para crear nuevo evento |
 | `/join/:hash` | Join.view | Sí | Unirse a evento por hash de invitación |
 | `/match/:id` | Match.view | Sí | Detalle/edición del evento |
+| `/preview/match/:id` | Match.view | No | Preview pública del evento (solo lectura) |
 | `/tournament` | Tournament.view | Sí | Crear torneo |
 | `/tournament/:id` | Tournament.view | Sí | Vista/edición de torneo existente |
+| `/preview/tournament/:id` | Tournament.view | No | Preview pública del torneo (solo lectura) |
 | `/events` | Events.view | No | Lista pública de todos los eventos |
 
 ### Modelo de datos
@@ -153,7 +156,7 @@ En `src/services/db.js`:
 6. Redirige a `/match/:id` en modo vista (solo lectura)
 
 ### Flujo: Ver/editar evento
-1. Usuario abre `/match/:id`
+1. Usuario autenticado abre `/match/:id` (o desde `/events` navega a `/preview/match/:id`)
 2. Carga desde Supabase (`events` + `players` relacionado)
 3. Vista por defecto: solo lectura para todos (detalles + lista de jugadores)
 4. Si es el `ownerId` → botones "Edit" y "Delete" visibles
@@ -161,6 +164,14 @@ En `src/services/db.js`:
 6. Delete: confirma → elimina evento de Supabase (cascade a players)
 7. Si es invitado no unido → botón "Join match"
 8. Si es invitado ya unido → solo vista
+
+### Flujo: Vista pública de previsualización
+1. Usuario (autenticado o no) abre `/preview/match/:id` o `/preview/tournament/:id`
+2. Se cargan los detalles desde Supabase sin verificar autenticación
+3. Todos los elementos interactivos están ocultos (Edit, Delete, Join, Shuffle, Remove player, Generate matches, score modal)
+4. Un badge "Preview" se muestra junto al título
+5. El usuario puede ver cancha, lineup, standings, participantes y resultados de partidos, pero no modificar nada
+6. Desde `/events` (público) se navega a estas rutas de preview
 
 ## 8. Criterios de éxito
 - App funcional sin backend propio
