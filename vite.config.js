@@ -13,5 +13,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-  cacheDir: '../node_modules/.vite'
+  cacheDir: '../node_modules/.vite',
+  test: {
+    environment: 'node'
+  }
 })

@@ -157,6 +157,52 @@ export async function deleteEvent (id) {
   if (error) throw error
 }
 
+export async function setPlayerTeam (eventId, userId, team) {
+  const { error } = await supabase
+    .from('players')
+    .update({ team })
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function removePlayerFromEvent (eventId, userId) {
+  const { error } = await supabase
+    .from('players')
+    .delete()
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function shuffleTeams (eventId) {
+  const { data: rows, error: fetchErr } = await supabase
+    .from('players')
+    .select('user_id')
+    .eq('event_id', eventId)
+
+  if (fetchErr) throw fetchErr
+  if (!rows || !rows.length) return
+
+  const shuffled = [...rows]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+
+  const half = Math.ceil(shuffled.length / 2)
+  const team1Ids = shuffled.slice(0, half).map(r => r.user_id)
+  const team2Ids = shuffled.slice(half).map(r => r.user_id)
+
+  const [{ error: err1 }, { error: err2 }] = await Promise.all([
+    supabase.from('players').update({ team: 'team1' }).eq('event_id', eventId).in('user_id', team1Ids),
+    supabase.from('players').update({ team: 'team2' }).eq('event_id', eventId).in('user_id', team2Ids)
+  ])
+
+  if (err1) throw err1
+  if (err2) throw err2
+}
+
 // Tournament functions
 
 async function mapTournament (row) {

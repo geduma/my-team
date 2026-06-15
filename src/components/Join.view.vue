@@ -11,6 +11,7 @@ const currentUser = ref(null)
 const loading = ref(true)
 const joined = ref(false)
 const error = ref('')
+const joining = ref(false)
 
 onMounted(async () => {
   currentUser.value = await getCurrentUser()
@@ -41,6 +42,7 @@ async function loadEvent () {
 
 async function handleJoin () {
   if (!event.value) return
+  joining.value = true
   const updated = { ...event.value }
   updated.players.push({
     id: currentUser.value.googleId,
@@ -79,10 +81,11 @@ async function handleJoin () {
           </div>
           <button
             v-else
-            class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90"
+            class="rounded-md bg-[#64e34f] px-6 py-3 text-sm font-semibold text-black shadow-sm hover:opacity-90 disabled:opacity-50"
+            :disabled="joining"
             @click="handleJoin"
           >
-            Join match
+            {{ joining ? 'Joining...' : 'Join match' }}
           </button>
         </div>
 

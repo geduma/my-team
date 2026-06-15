@@ -27,15 +27,12 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | F4 | **Unirse a evento** | Al abrir el enlace, el jugador ve los detalles del evento y confirma su asistencia (autenticado con Google). |
 | F5 | **Vista del evento (Match)** | Vista con detalles del evento. El organizador tiene botones "Edit" y "Delete". Los invitados ven solo lectura con opción "Join match" si no se han unido. |
 | F6 | **Persistencia compartida** | Los datos se guardan en Supabase (PostgreSQL). Todos los usuarios ven los mismos eventos en tiempo real. |
-
-### Fase 2
-
-| # | Funcionalidad | Descripción |
-|---|--------------|-------------|
-| F7 | **Asignación aleatoria de equipos** | Botón que divide los jugadores confirmados en 2 equipos balanceados aleatoriamente. |
+| F7 | **Asignación aleatoria de equipos** | Botón "Shuffle" que divide los jugadores confirmados en 2 equipos balanceados aleatoriamente. |
 | F8 | **Cancha visual** | Diagrama de cancha con posiciones de jugadores (11 vs 11 o según número de jugadores). |
-| F9 | **Edición manual de equipos** | El organizador puede arrastrar jugadores entre equipos y posiciones. |
-| F10 | **Torneo** | Brackets de torneo multi-partido (usa la misma vista Match como base). |
+| F9 | **Edición manual de equipos** | El organizador puede hacer clic en un jugador para moverlo al otro equipo. |
+| F10 | **Torneo round-robin** | Creación y gestión de torneos con sistema round-robin, tabla de posiciones (3-1-0), y generación de partidos. |
+
+### Fase 2 (futuro)
 
 ## 5. Requerimientos No Funcionales
 
@@ -60,6 +57,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | Persistencia | Supabase (PostgreSQL) para eventos y jugadores |
 | Sesión local | IndexedDB para `currentUser` |
 | Avatars | DiceBear HTTP API |
+| Algoritmo torneo | src/services/tournament.js (round-robin) |
 | Despliegue | Azure Static Web Apps |
 
 ### Árbol de rutas
@@ -70,7 +68,8 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | `/create` | Create.view | Sí | Formulario para crear nuevo evento |
 | `/join/:hash` | Join.view | Sí | Unirse a evento por hash de invitación |
 | `/match/:id` | Match.view | Sí | Detalle/edición del evento |
-| `/tournament` | Match.view | Sí | Vista de torneo (fase 2) |
+| `/tournament` | Tournament.view | Sí | Crear torneo |
+| `/tournament/:id` | Tournament.view | Sí | Vista/edición de torneo existente |
 | `/events` | Events.view | No | Lista pública de todos los eventos |
 
 ### Modelo de datos
@@ -131,6 +130,9 @@ En `src/services/db.js`:
 
 - `mapEvent()` convierte fila SQL → objeto JS con array `players` embebido
 - `toSnake()` convierte objeto JS → columnas snake_case
+- `setPlayerTeam(eventId, userId, team)` — asigna jugador a equipo
+- `shuffleTeams(eventId)` — randomiza equipos en la DB
+- Funciones de torneo: `createTournament`, `updateTournament`, `addParticipant`, `removeParticipant`, `setTournamentMatches`, `updateMatchScore`, `getTournament`, `getAllTournaments`, `deleteTournament`
 
 ## 7. Flujos principales
 

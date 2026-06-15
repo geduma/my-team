@@ -10,6 +10,7 @@ const showLogin = ref(false)
 const showFindModal = ref(false)
 const findHash = ref('')
 const findError = ref('')
+const finding = ref(false)
 const signInContainer = ref(null)
 const user = ref(null)
 let signInRendered = false
@@ -77,6 +78,7 @@ function handleFind () {
     findError.value = 'Please enter an event code'
     return
   }
+  finding.value = true
   showFindModal.value = false
   router.push(`/join/${findHash.value.trim()}`)
 }
@@ -145,9 +147,10 @@ async function openLogin () {
         <p v-if="findError" class="text-red-400 text-sm mt-2">{{ findError }}</p>
         <div class="flex gap-3 mt-6">
           <button
-            class="flex-1 rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
+            class="flex-1 rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3] disabled:opacity-50"
+            :disabled="finding"
             @click="handleFind"
-          >Join</button>
+          >{{ finding ? 'Joining...' : 'Join' }}</button>
           <button
             class="flex-1 rounded-md bg-gray-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-400"
             @click="showFindModal = false"

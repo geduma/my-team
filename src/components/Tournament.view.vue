@@ -35,6 +35,9 @@ const awayScore = ref(0)
 const showDeleteModal = ref(false)
 const editingTitle = ref(false)
 const editTitleValue = ref('')
+const addingParticipant = ref(false)
+const removingParticipant = ref(false)
+const savingScore = ref(false)
 
 const isOwner = computed(() => {
   return tournament.value && currentUser.value && tournament.value.ownerId === currentUser.value.googleId
@@ -128,6 +131,7 @@ async function handleCreate () {
 function handleAddParticipant () {
   if (!participantName.value.trim() || !participantTeam.value.trim()) return
   if (!tournament.value) return
+  addingParticipant.value = true
 
   const p = {
     displayName: participantName.value.trim(),
@@ -141,15 +145,20 @@ function handleAddParticipant () {
     participantTeam.value = ''
   }).catch(() => {
     error.value = 'Error adding participant'
+  }).finally(() => {
+    addingParticipant.value = false
   })
 }
 
 function handleRemoveParticipant (id) {
+  removingParticipant.value = true
   removeParticipant(id).then(() => {
     tournament.value.participants = tournament.value.participants.filter(p => p.id !== id)
     tournament.value.matches = []
   }).catch(() => {
     error.value = 'Error removing participant'
+  }).finally(() => {
+    removingParticipant.value = false
   })
 }
 
@@ -183,6 +192,7 @@ function openScoreModal (match) {
 
 async function handleSaveScore () {
   if (!selectedMatch.value) return
+  savingScore.value = true
   const match = selectedMatch.value
   await updateMatchScore(match.id, homeScore.value, awayScore.value)
 
@@ -191,6 +201,7 @@ async function handleSaveScore () {
 
   showScoreModal.value = false
   selectedMatch.value = null
+  savingScore.value = false
 }
 
 async function handleDeleteTournament () {
@@ -311,9 +322,9 @@ async function saveTitle () {
             />
             <button
               class="w-full sm:w-auto rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
-              :disabled="!participantName.trim() || !participantTeam.trim()"
+              :disabled="addingParticipant || !participantName.trim() || !participantTeam.trim()"
               @click="handleAddParticipant"
-            >Add</button>
+            >{{ addingParticipant ? 'Adding...' : 'Add' }}</button>
           </div>
 
           <div class="max-h-[300px] overflow-y-auto space-y-2 pr-1">
@@ -331,9 +342,10 @@ async function saveTitle () {
               <span class="text-[#dedcdc] text-xs truncate">— {{ p.teamName }}</span>
               <button
                 v-if="isOwner"
-                class="ml-auto text-red-400 hover:text-red-300 text-sm shrink-0"
+                class="ml-auto text-red-400 hover:text-red-300 text-sm shrink-0 disabled:opacity-50"
+                :disabled="removingParticipant"
                 @click="handleRemoveParticipant(p.id)"
-              >Remove</button>
+              >{{ removingParticipant ? '...' : 'Remove' }}</button>
             </div>
             <p v-if="!tournament.participants.length" class="text-sm text-[#dedcdc]">No participants yet</p>
           </div>
@@ -496,9 +508,10 @@ async function saveTitle () {
         </div>
         <div class="flex gap-3">
           <button
-            class="flex-1 rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90"
+            class="flex-1 rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
+            :disabled="savingScore"
             @click="handleSaveScore"
-          >Save</button>
+          >{{ savingScore ? 'Saving...' : 'Save' }}</button>
           <button
             class="flex-1 rounded-md bg-gray-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-400"
             @click="showScoreModal = false"
