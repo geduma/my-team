@@ -6,10 +6,11 @@ const APP_ID = import.meta.env.VITE_APP_ID
 
 let callbackQueue = []
 
-export async function login (providerId) {
-  sessionStorage.setItem('redirect', window.location.search.includes('redirect=')
+export async function login (providerId, redirectTo) {
+  const redirect = redirectTo || (window.location.search.includes('redirect=')
     ? new URLSearchParams(window.location.search).get('redirect')
     : '/create')
+  sessionStorage.setItem('redirect', redirect)
 
   const res = await fetch(`${API_BASE}/auth/login/${APP_ID}/${providerId}`, {
     method: 'POST'
@@ -23,7 +24,12 @@ export async function login (providerId) {
 }
 
 export async function processCallback (sessionToken) {
-  const res = await fetch(`${API_BASE}/auth/session/${sessionToken}`)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
+  const res = await fetch(`${API_BASE}/auth/session/${sessionToken}`, {
+    signal: controller.signal
+  })
+  clearTimeout(timeout)
   const json = await res.json()
   if (!json.ok) throw new Error(json.msg || 'Session error')
   return json.data
