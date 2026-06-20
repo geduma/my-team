@@ -72,7 +72,7 @@ npx standard     # lint con StandardJS
 - Solo se usa `prov_google` como provider
 - `session_token` single-use: se elimina en la API tras consultarlo
 - El `redirect` destino se persiste en `sessionStorage` antes del redirect OAuth
-- Avatar: foto real del provider, fallback a DiceBear con `googleId` como seed
+- Avatar: DiceBear HTTP API con `email` como seed
 - El superuser se detecta por Google ID hardcodeado en `auth.js`
 
 ### Variables de entorno

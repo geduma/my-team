@@ -103,7 +103,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | `event_id` | `uuid` FK → events | Evento al que pertenece |
 | `user_id` | `text` | Google ID del jugador |
 | `display_name` | `text` | Nombre visible |
-| `photo_url` | `text` | Avatar DiceBear |
+| `photo_url` | `text` | Avatar DiceBear (seed: email) |
 | `team` | `text` | `'team1'`, `'team2'` o `null` |
 | UNIQUE | `(event_id, user_id)` | Un jugador por evento |
 

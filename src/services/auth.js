@@ -42,7 +42,7 @@ export function buildUser (sessionData) {
     googleId: rawData.id || rawData.sub || sessionData.email,
     displayName: sessionData.displayName,
     email: sessionData.email,
-    photoURL: sessionData.picture || `https://api.dicebear.com/9.x/avataaars/svg?seed=${rawData.id || sessionData.email}`,
+    photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${sessionData.email}`,
     isSuperuser,
     provider: sessionData.provider,
     rawData
