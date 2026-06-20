@@ -1,19 +1,18 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { initAuth, renderSignInButton, onSignIn, signOut } from '../services/auth'
+import { login as authLogin, signOut } from '../services/auth'
 import { getCurrentUser } from '../services/db'
 
 const route = useRoute()
 const router = useRouter()
-const showLogin = ref(false)
 const showFindModal = ref(false)
 const findHash = ref('')
 const findError = ref('')
 const finding = ref(false)
-const signInContainer = ref(null)
+const loginTarget = ref(null)
+const loginError = ref('')
 const user = ref(null)
-let signInRendered = false
 
 async function checkAuth () {
   user.value = await getCurrentUser()
@@ -21,41 +20,15 @@ async function checkAuth () {
 
 onMounted(async () => {
   await checkAuth()
-  await initAuth()
-
   if (route.query.login === 'true' && !user.value) {
-    showLogin.value = true
-    await nextTick()
-    renderButton()
-  }
-})
-
-watch(showLogin, async (val) => {
-  if (val) {
-    await nextTick()
-    renderButton()
+    authLogin('prov_google')
   }
 })
 
 watch(() => route.query.login, async (val) => {
   if (val === 'true' && !user.value) {
-    showLogin.value = true
-    await nextTick()
-    renderButton()
+    authLogin('prov_google')
   }
-})
-
-function renderButton () {
-  if (signInRendered || !signInContainer.value) return
-  signInRendered = true
-  renderSignInButton(signInContainer.value)
-}
-
-onSignIn(async (loggedUser) => {
-  user.value = loggedUser
-  showLogin.value = false
-  const redirect = route.query.redirect || '/create'
-  router.push(redirect)
 })
 
 async function handleSignOut () {
@@ -63,11 +36,30 @@ async function handleSignOut () {
   user.value = null
 }
 
-function openFind () {
-  if (!user.value) {
-    showLogin.value = true
+async function doLogin (target, redirectTo) {
+  if (user.value) {
+    router.push(redirectTo)
     return
   }
+  loginError.value = ''
+  loginTarget.value = target
+  try {
+    await authLogin('prov_google', redirectTo)
+  } catch (e) {
+    loginError.value = e.message || 'Login failed. Please try again.'
+    loginTarget.value = null
+  }
+}
+
+function openLogin () {
+  doLogin('create', '/create')
+}
+
+function openTournament () {
+  doLogin('tournament', '/tournament')
+}
+
+function openFind () {
   findHash.value = ''
   findError.value = ''
   showFindModal.value = true
@@ -82,16 +74,6 @@ function handleFind () {
   showFindModal.value = false
   router.push(`/join/${findHash.value.trim()}`)
 }
-
-async function openLogin () {
-  if (user.value) {
-    router.push('/create')
-    return
-  }
-  showLogin.value = true
-  await nextTick()
-  renderButton()
-}
 </script>
 
 <template>
@@ -102,22 +84,37 @@ async function openLogin () {
       <p class="mt-8 text-[#dedcdc]">Perfect app to effortlessly organize and coordinate soccer matches with your friends</p>
       <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-x-6">
         <button
-          class="w-full sm:w-auto rounded-md bg-[#0b88de] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          class="w-full sm:w-auto rounded-md bg-[#0b88de] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+          :disabled="loginTarget === 'create'"
           @click="openLogin"
-        >Create Match</button>
+        >
+          <svg v-if="loginTarget === 'create'" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          {{ loginTarget === 'create' ? 'Signing in...' : 'Create Match' }}
+        </button>
         <button
           class="w-full sm:w-auto rounded-md bg-[#0b88de] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           @click="openFind"
         >Find Match</button>
-        <router-link
-          class="w-full sm:w-auto rounded-md bg-[#0b88de] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          to="/tournament"
-        >New Tournament</router-link>
+        <button
+          class="w-full sm:w-auto rounded-md bg-[#0b88de] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+          :disabled="loginTarget === 'tournament'"
+          @click="openTournament"
+        >
+          <svg v-if="loginTarget === 'tournament'" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          {{ loginTarget === 'tournament' ? 'Signing in...' : 'New Tournament' }}
+        </button>
         <router-link
           class="w-full sm:w-auto rounded-md bg-[#0b88de] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           to="/events"
         >All Events</router-link>
       </div>
+      <p v-if="loginError" class="mt-4 text-red-400 text-sm">{{ loginError }}</p>
       <div v-if="user" class="mt-6 flex items-center justify-center gap-4 text-sm">
         <span class="text-[#dedcdc]">Logged in as {{ user.displayName }}</span>
         <button class="text-red-400 hover:text-red-300" @click="handleSignOut">Sign out</button>
@@ -126,14 +123,6 @@ async function openLogin () {
   </main>
 
   <Teleport to="body">
-    <div v-if="showLogin" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showLogin = false">
-      <div class="bg-[#1a1a1a] rounded-lg p-8 shadow-xl w-80">
-        <h2 class="text-white text-lg font-semibold mb-6 text-center">Sign in to MyTeam</h2>
-        <div ref="signInContainer" class="flex justify-center"></div>
-        <button class="mt-6 text-sm text-[#dedcdc] hover:text-white w-full text-center" @click="showLogin = false">Cancel</button>
-      </div>
-    </div>
-
     <div v-if="showFindModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showFindModal = false">
       <div class="bg-[#1a1a1a] rounded-lg p-8 shadow-xl w-80">
         <h2 class="text-white text-lg font-semibold mb-6 text-center">Find Match</h2>

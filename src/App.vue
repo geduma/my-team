@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
 
 const route = useRoute()
-const isHome = computed(() => route.name === 'home')
+const showHeader = computed(() => route.name !== 'home' && route.name !== 'auth-callback')
 </script>
 
 <template>
@@ -13,7 +13,7 @@ const isHome = computed(() => route.name === 'home')
   </video>
   <div class="overlay"></div>
   <div class="flex flex-col min-h-screen">
-    <div v-if="!isHome" class="sticky top-0 z-50 w-full bg-[#00000096] backdrop-blur-sm">
+    <div v-if="showHeader" class="sticky top-0 z-50 w-full bg-[#00000096] backdrop-blur-sm">
       <div class="mx-auto max-w-screen-xl px-4 py-3 sm:px-6 lg:px-8">
         <RouterLink
           to="/"
