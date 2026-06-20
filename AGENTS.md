@@ -5,7 +5,7 @@
 - **Build:** Vite 7
 - **Routing:** Vue Router 4 (history mode)
 - **Styling:** Tailwind CSS 3
-- **Auth:** Google Identity Services (GIS) — CDN, sin npm package
+- **Auth:** Geduma Auth API (OAuth centralizado) — 3 endpoints HTTP, sin CDN ni npm package
 - **Storage:** Supabase (PostgreSQL) para eventos y jugadores
 - **Session:** IndexedDB solo para `currentUser`
 - **Avatars:** DiceBear HTTP API
@@ -65,23 +65,26 @@ npx standard     # lint con StandardJS
 - **IndexedDB:** solo sesión del usuario (`currentUser` en DB `myteam-user`)
 - Helper functions en `src/services/db.js`
 
-### Google Auth
-- Cargar GIS desde CDN en `index.html`
-- Client ID configurable via `VITE_GOOGLE_CLIENT_ID` en `.env` (archivo ignorado por git)
-- Inicializar en `src/services/auth.js` leyendo `import.meta.env.VITE_GOOGLE_CLIENT_ID`
-- Guardar usuario en IndexedDB store `currentUser`
-- Avatar generado por DiceBear API usando `googleId` como seed
-- El token de Google solo se usa para identificación, no para backend
+### Geduma Auth
+- API base hardcodeada como constante en `src/services/auth.js`: `API_BASE = 'https://api.geduma.com'`
+- App ID vía `VITE_APP_ID` en `.env` (archivo ignorado por git)
+- Flujo: `login(providerId)` → POST `/auth/login/{appId}/{providerId}` → redirect a OAuth provider → callback a `/auth/callback?session_token=xxx` → GET `/auth/session/{sessionToken}` → guardar usuario en IndexedDB
+- Solo se usa `prov_google` como provider
+- `session_token` single-use: se elimina en la API tras consultarlo
+- El `redirect` destino se persiste en `sessionStorage` antes del redirect OAuth
+- Avatar: foto real del provider, fallback a DiceBear con `googleId` como seed
+- El superuser se detecta por Google ID hardcodeado en `auth.js`
 
 ### Variables de entorno
 - Archivo `.env` en la raíz (no commiteado)
 - Prefijo `VITE_` para que Vite las exponga al frontend
 - Ejemplo:
   ```
-  VITE_GOOGLE_CLIENT_ID=123456789-abc123.apps.googleusercontent.com
+  VITE_APP_ID=app_xxxxxx
   VITE_SUPABASE_URL=https://your-project.supabase.co
   VITE_SUPABASE_ANON_KEY=your-anon-key
   ```
+- `VITE_GEDUMA_API_URL` no va en `.env`: es constante hardcodeada en `src/services/auth.js`
 
 ### Rutas
 | Ruta | Componente | Auth requerida |
@@ -94,12 +97,14 @@ npx standard     # lint con StandardJS
 | `/tournament/:id` | Tournament.view | Sí |
 | `/preview/match/:id` | Match.view | No (preview) |
 | `/preview/tournament/:id` | Tournament.view | No (preview) |
+| `/auth/callback` | AuthCallback.view | No |
 | `/events` | Events.view | No |
 
 ### Navegación protegida
 - `router.beforeEach` verifica `currentUser` en IndexedDB
-- Si la ruta requiere auth y no hay usuario, guardar destino y redirect a Home con modal de login
-- Tras login exitoso, redirect al destino guardado
+- Si la ruta requiere auth y no hay usuario, guardar destino en query param `redirect` y redirige a Home con `?login=true`
+- Home detecta `?login=true` y ejecuta `login('prov_google')`, que persiste el `redirect` en `sessionStorage` y redirige al provider OAuth
+- Tras el callback, `AuthCallback.view.vue` procesa el `session_token`, guarda el usuario en IndexedDB y redirige al destino guardado
 
 ### Estructura de archivos
 ```
@@ -114,11 +119,12 @@ src/
 │   ├── Join.view.vue
 │   ├── Match.view.vue
 │   ├── Tournament.view.vue
+│   ├── AuthCallback.view.vue
 │   └── Events.view.vue
 ├── router/
 │   └── index.js
 └── services/
-    ├── auth.js        # Google Auth (GIS)
+    ├── auth.js        # Geduma Auth API (OAuth centralizado)
     ├── db.js           # Supabase + IndexedDB (session)
     ├── supabase.js     # Supabase client
     └── tournament.js   # Round-robin algorithm
@@ -128,14 +134,14 @@ src/
 1. NO agregar dependencias npm sin aprobación explícita
 2. NO usar librerías de UI (Vuetify, PrimeVue, etc.) — solo Tailwind
 3. NO usar Vuex/Pinia a menos que sea estrictamente necesario (preferir provide/inject o props)
-4. NO modificar `index.html` a menos que sea para agregar CDN de GIS
+4. NO modificar `index.html` a menos que sea necesario
 5. NO renombrar vistas ni rutas sin actualizar el router
 6. Mantener todos los componentes en `src/components/` a menos que haya más de 3 subcomponentes
 7. Los archivos de servicio van en `src/services/`
 8. NO subir secretos/tokens al repo
 9. Los estilos globales solo en `main.css` — no en `App.vue`
 10. Los video/background MP4 se sirven desde `public/`
-11. Variables de entorno con prefijo `VITE_`, archivo `.env` en raíz, ignorado por git
+11. Variables de entorno con prefijo `VITE_`, archivo `.env` en raíz, ignorado por git. `VITE_GEDUMA_API_URL` no se usa (constante hardcodeada en `auth.js`)
 12. Las migraciones SQL de Supabase van en `supabase-migration.sql` en la raíz
 13. No modificar RLS policies sin verificar el impacto en la seguridad
 

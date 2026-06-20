@@ -21,7 +21,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 
 | # | Funcionalidad | Descripción |
 |---|--------------|-------------|
-| F1 | **Login con Google** | Autenticación usando Google Identity Services (GIS). Sin registro manual. |
+| F1 | **Login con Google** | Autenticación OAuth centralizada vía Geduma Auth API. Sin registro manual. |
 | F2 | **Crear evento** | Formulario para crear un partido: nombre, fecha, hora, lugar, descripción opcional. |
 | F3 | **Hash único de invitación** | Al crear el evento se genera un hash único. El organizador comparte la URL: `/join/:hash` |
 | F4 | **Unirse a evento** | Al abrir el enlace, el jugador ve los detalles del evento y confirma su asistencia (autenticado con Google). |
@@ -45,7 +45,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | R4 | Backend serverless via Supabase (PostgreSQL + API) |
 | R5 | UI en inglés, código en inglés |
 | R6 | Diseño responsive (mobile-first) |
-| R7 | Google Client ID y Supabase credentials configurables via `.env` |
+| R7 | App ID (Geduma Auth) y Supabase credentials configurables via `.env` |
 
 ## 6. Arquitectura Técnica
 
@@ -54,7 +54,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | Frontend | Vue 3 (Composition API) + Vite |
 | Estilos | Tailwind CSS |
 | Ruteo | Vue Router 4 |
-| Autenticación | Google Identity Services (GIS) — CDN |
+| Autenticación | Geduma Auth API (OAuth centralizado) — `src/services/auth.js` |
 | Persistencia | Supabase (PostgreSQL) para eventos y jugadores |
 | Sesión local | IndexedDB para `currentUser` |
 | Avatars | DiceBear HTTP API |
@@ -66,6 +66,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | Ruta | Componente | Auth | Descripción |
 |------|-----------|:----:|-------------|
 | `/` | Home.view | No | Landing page con acciones principales |
+| `/auth/callback` | AuthCallback.view | No | Callback OAuth — recibe `session_token` y completa login |
 | `/create` | Create.view | Sí | Formulario para crear nuevo evento |
 | `/join/:hash` | Join.view | Sí | Unirse a evento por hash de invitación |
 | `/match/:id` | Match.view | Sí | Detalle/edición del evento |
@@ -111,10 +112,13 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 ```js
 {
   id: 'user',            // clave fija
-  googleId: string,      // Google sub
+  googleId: string,      // ID del provider (sub de Google)
   displayName: string,
   email: string,
-  photoURL: string       // DiceBear URL
+  photoURL: string       // Foto del provider o DiceBear fallback
+  isSuperuser: boolean,  // Admin check por Google ID hardcodeado
+  provider: string,      // 'google', 'github', etc.
+  rawData: object        // Respuesta cruda del provider
 }
 ```
 
@@ -141,7 +145,7 @@ En `src/services/db.js`:
 
 ### Flujo: Crear evento
 1. Usuario abre `/` → hace clic en "Create Match"
-2. Si no está autenticado, se muestra login con Google
+2. Si no está autenticado, se redirige a Geduma Auth → Google OAuth → callback → redirige al destino
 3. Autenticado → redirige a `/create`
 4. Llena formulario (nombre, fecha, hora, lugar)
 5. Submit → se guarda en Supabase (`events` + `players`) → se genera hash → redirige a `/match/:id`
@@ -149,7 +153,7 @@ En `src/services/db.js`:
 
 ### Flujo: Unirse a evento
 1. Invitado abre `/join/:hash`
-2. Si no está autenticado, login con Google
+2. Si no está autenticado, redirige a Geduma Auth → Google OAuth → callback
 3. Autenticado → se cargan los detalles del evento desde Supabase
 4. Botón "Join match" en Join.view o en Match.view
 5. Se agrega el jugador a la tabla `players`
