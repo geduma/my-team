@@ -1,74 +1,60 @@
-/* global google */
-
 import { setCurrentUser, clearCurrentUser } from './db'
 
 const SUPERUSER_GID = '111381241389439493988'
+const API_BASE = 'https://api.geduma.com'
+const APP_ID = import.meta.env.VITE_APP_ID
 
-let authInited = false
 let callbackQueue = []
 
-function handleCredentialResponse (response) {
-  const data = parseJwt(response.credential)
-  const isSuperuser = data.sub === SUPERUSER_GID
-  const user = {
-    googleId: data.sub,
-    displayName: data.name,
-    email: data.email,
-    photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${data.sub}`,
-    isSuperuser
+export async function login (providerId) {
+  sessionStorage.setItem('redirect', window.location.search.includes('redirect=')
+    ? new URLSearchParams(window.location.search).get('redirect')
+    : '/create')
+
+  const res = await fetch(`${API_BASE}/auth/login/${APP_ID}/${providerId}`, {
+    method: 'POST'
+  })
+  const json = await res.json()
+  if (json.ok && json.data?.redirect) {
+    window.location.href = json.data.redirect
+  } else {
+    throw new Error(json.msg || 'Login failed')
   }
-  setCurrentUser(user).then(() => {
-    callbackQueue.forEach(fn => fn(user))
-    callbackQueue = []
-  })
 }
 
-function parseJwt (token) {
-  const base64Url = token.split('.')[1]
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-  const jsonPayload = decodeURIComponent(
-    atob(base64)
-      .split('')
-      .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-      .join('')
-  )
-  return JSON.parse(jsonPayload)
+export async function processCallback (sessionToken) {
+  const res = await fetch(`${API_BASE}/auth/session/${sessionToken}`)
+  const json = await res.json()
+  if (!json.ok) throw new Error(json.msg || 'Session error')
+  return json.data
 }
 
-export function initAuth () {
-  if (authInited) return Promise.resolve()
-  return new Promise((resolve) => {
-    const check = () => {
-      if (window.google?.accounts?.id) {
-        google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse
-        })
-        authInited = true
-        resolve()
-      } else {
-        setTimeout(check, 200)
-      }
-    }
-    check()
-  })
-}
-
-export function renderSignInButton (element) {
-  initAuth().then(() => {
-    google.accounts.id.renderButton(element, {
-      type: 'standard',
-      shape: 'rectangular',
-      theme: 'outline',
-      text: 'signin_with',
-      size: 'large',
-      width: element.offsetWidth || 280
-    })
-  })
+export function buildUser (sessionData) {
+  const rawData = sessionData.rawData || {}
+  const isSuperuser = rawData.id === SUPERUSER_GID
+  return {
+    googleId: rawData.id || rawData.sub || sessionData.email,
+    displayName: sessionData.displayName,
+    email: sessionData.email,
+    photoURL: sessionData.picture || `https://api.dicebear.com/9.x/avataaars/svg?seed=${rawData.id || sessionData.email}`,
+    isSuperuser,
+    provider: sessionData.provider,
+    rawData
+  }
 }
 
 export function onSignIn (fn) {
   callbackQueue.push(fn)
+}
+
+export function notifySignIn (user) {
+  callbackQueue.forEach(fn => fn(user))
+  callbackQueue = []
+}
+
+export async function saveUserAndNotify (user) {
+  await setCurrentUser(user)
+  notifySignIn(user)
 }
 
 export async function signOut () {

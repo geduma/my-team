@@ -5,6 +5,7 @@ import Match from '../components/Match.view.vue'
 import Create from '../components/Create.view.vue'
 import Events from '../components/Events.view.vue'
 import Tournament from '../components/Tournament.view.vue'
+import AuthCallback from '../components/AuthCallback.view.vue'
 import { getCurrentUser } from '../services/db'
 
 const router = createRouter({
@@ -56,6 +57,11 @@ const router = createRouter({
       name: 'tournament-preview',
       component: Tournament,
       meta: { preview: true }
+    },
+    {
+      path: '/auth/callback',
+      name: 'auth-callback',
+      component: AuthCallback
     },
     {
       path: '/events',
