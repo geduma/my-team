@@ -23,7 +23,7 @@ onMounted(async () => {
 
     const mapped = tournaments.map(t => ({
       id: t.id,
-      hash: null,
+      hash: t.id.slice(0, 8),
       title: t.title,
       type: 'tournament',
       date: null,
