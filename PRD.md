@@ -20,12 +20,12 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 ### MVP (Fase 1)
 
 | # | Funcionalidad | Descripción |
-|---|--------------|-------------|
-| F1 | **Login con Google** | Autenticación OAuth centralizada vía Geduma Auth API. Sin registro manual. |
-| F2 | **Crear evento** | Formulario para crear un partido: nombre, fecha, hora, lugar, descripción opcional. |
+|--:|--------------|-------------|
+| F1 | **Modo invitado + Google Auth** | Modo guest automático (UUID + name) para unirse a eventos. Login con Google vía Geduma Auth API para crear eventos y torneos. |
+| F2 | **Crear evento** | Formulario para crear un partido: nombre, fecha, hora, lugar, descripción opcional. Solo usuarios con Google. |
 | F3 | **Hash único de invitación** | Al crear el evento se genera un hash único. El organizador comparte la URL: `/join/:hash` |
-| F4 | **Unirse a evento** | Al abrir el enlace, el jugador ve los detalles del evento y confirma su asistencia (autenticado con Google). |
-| F5 | **Vista del evento (Match)** | Vista con detalles del evento. El organizador tiene botones "Edit" y "Delete". Los invitados ven solo lectura con opción "Join match" si no se han unido. |
+| F4 | **Unirse a evento** | Al abrir el enlace, el jugador ve los detalles del evento. Si es guest, ingresa su nombre (obligatorio, único por evento). Si es Google user, confirma directamente. |
+| F5 | **Vista del evento (Match)** | Vista con detalles del evento. El organizador tiene botones "Edit" y "Delete". Los invitados (guest o Google) ven solo lectura con opción "Join match" si no se han unido. |
 | F6 | **Persistencia compartida** | Los datos se guardan en Supabase (PostgreSQL). Todos los usuarios ven los mismos eventos en tiempo real. |
 | F7 | **Asignación aleatoria de equipos** | Botón "Shuffle" que divide los jugadores confirmados en 2 equipos balanceados aleatoriamente. |
 | F8 | **Cancha visual** | Diagrama de cancha con posiciones de jugadores (11 vs 11 o según número de jugadores). |
@@ -63,18 +63,20 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 
 ### Árbol de rutas
 
-| Ruta | Componente | Auth | Descripción |
-|------|-----------|:----:|-------------|
+| Ruta | Componente | Auth requerida | Descripción |
+|------|-----------|:------------:|-------------|
 | `/` | Home.view | No | Landing page con acciones principales |
 | `/auth/callback` | AuthCallback.view | No | Callback OAuth — recibe `session_token` y completa login |
-| `/create` | Create.view | Sí | Formulario para crear nuevo evento |
-| `/join/:hash` | Join.view | Sí | Unirse a evento por hash de invitación |
-| `/match/:id` | Match.view | Sí | Detalle/edición del evento |
+| `/create` | Create.view | Google | Formulario para crear nuevo evento |
+| `/join/:hash` | Join.view | No* | Unirse a evento por hash (guest: input nombre) |
+| `/match/:id` | Match.view | No* | Detalle del evento (guest: unirse, ver info) |
 | `/preview/match/:id` | Match.view | No | Preview pública del evento (solo lectura) |
-| `/tournament` | Tournament.view | Sí | Crear torneo |
-| `/tournament/:id` | Tournament.view | Sí | Vista/edición de torneo existente |
+| `/tournament` | Tournament.view | Google | Crear torneo |
+| `/tournament/:id` | Tournament.view | No* | Vista de torneo existente (guest: read-only) |
 | `/preview/tournament/:id` | Tournament.view | No | Preview pública del torneo (solo lectura) |
 | `/events` | Events.view | No | Lista pública de todos los eventos |
+
+_* Guest UUID generado automáticamente y persistido en IndexedDB + localStorage_
 
 ### Modelo de datos
 
@@ -112,15 +114,23 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 ```js
 {
   id: 'user',            // clave fija
-  googleId: string,      // ID del provider (sub de Google)
-  displayName: string,
-  email: string,
-  photoURL: string       // Foto del provider o DiceBear fallback
+  googleId: string,      // Google ID o UUID de guest
+  displayName: string,   // null hasta que el guest ingrese su nombre
+  email: string,         // null para guest
+  photoURL: string       // DiceBear con UUID como seed (guest) o email (Google)
   isSuperuser: boolean,  // Admin check por Google ID hardcodeado
-  provider: string,      // 'google', 'github', etc.
-  rawData: object        // Respuesta cruda del provider
+  provider: string,      // 'google' o 'guest'
+  rawData: object        // Respuesta cruda del provider (solo Google)
 }
 ```
+
+#### localStorage — `myteam-guest-id` (backup de identidad guest)
+
+```
+myteam-guest-id: "uuid-generado-aleatoriamente"
+```
+
+Persiste aunque se borre IndexedDB. Si el usuario vuelve a la app, el mismo UUID se reusa.
 
 ### Mapeo JS ↔ DB
 
@@ -145,29 +155,41 @@ En `src/services/db.js`:
 
 ### Flujo: Crear evento
 1. Usuario abre `/` → hace clic en "Create Match"
-2. Si no está autenticado, se redirige a Geduma Auth → Google OAuth → callback → redirige al destino
-3. Autenticado → redirige a `/create`
-4. Llena formulario (nombre, fecha, hora, lugar)
-5. Submit → se guarda en Supabase (`events` + `players`) → se genera hash → redirige a `/match/:id`
-6. Se muestra el link de invitación para copiar y compartir
+2. Si no está autenticado con Google, se redirige a Geduma Auth → Google OAuth → callback → redirige al destino
+3. Si es guest, se inicia OAuth automáticamente. Tras login Google, el guest se ignora y se usa la nueva identidad Google.
+4. Autenticado con Google → redirige a `/create`
+5. Llena formulario (nombre, fecha, hora, lugar)
+6. Submit → se guarda en Supabase (`events` + `players`) → se genera hash → redirige a `/match/:id`
+7. Se muestra el link de invitación para copiar y compartir
 
-### Flujo: Unirse a evento
+### Flujo: Unirse a evento (guest)
 1. Invitado abre `/join/:hash`
-2. Si no está autenticado, redirige a Geduma Auth → Google OAuth → callback
-3. Autenticado → se cargan los detalles del evento desde Supabase
-4. Botón "Join match" en Join.view o en Match.view
-5. Se agrega el jugador a la tabla `players`
-6. Redirige a `/match/:id` en modo vista (solo lectura)
+2. Si no hay usuario en IndexedDB, se genera automáticamente un UUID guest (respaldado en localStorage)
+3. Se cargan los detalles del evento desde Supabase
+4. Se muestra input de nombre (obligatorio). Si el guest ya tiene nombre guardado, se prellena.
+5. Al hacer clic en "Join", se valida que el nombre no exista ya en el evento (case-insensitive)
+6. Si hay duplicado → error, puede cambiar el nombre
+7. Si ok → se persiste el nombre en IndexedDB y se agrega a `players`
+8. Redirige a `/match/:id`
+
+### Flujo: Unirse a evento (Google user)
+1. Usuario autenticado con Google abre `/join/:hash`
+2. Se cargan los detalles del evento
+3. Botón "Join match" sin input de nombre (usa `displayName` de Google)
+4. Se agrega el jugador a la tabla `players`
+5. Redirige a `/match/:id`
 
 ### Flujo: Ver/editar evento
-1. Usuario autenticado abre `/match/:id` (o desde `/events` navega a `/preview/match/:id`)
-2. Carga desde Supabase (`events` + `players` relacionado)
-3. Vista por defecto: solo lectura para todos (detalles + lista de jugadores)
-4. Si es el `ownerId` → botones "Edit" y "Delete" visibles
-5. Edit: formulario editable → Save actualiza en Supabase
-6. Delete: confirma → elimina evento de Supabase (cascade a players)
-7. Si es invitado no unido → botón "Join match"
-8. Si es invitado ya unido → solo vista
+1. Usuario abre `/match/:id` (o desde `/events` navega a `/preview/match/:id`)
+2. Si no hay usuario, se crea guest automáticamente
+3. Carga desde Supabase (`events` + `players` relacionado)
+4. Vista por defecto: solo lectura para todos (detalles + lista de jugadores)
+5. Si es el `ownerId` (Google ID real) → botones "Edit" y "Delete" visibles
+6. Guest users: no ven Edit/Delete/Shuffle/Remove (solo se unen y ven info)
+7. Edit: formulario editable → Save actualiza en Supabase
+8. Delete: confirma → elimina evento de Supabase (cascade a players)
+9. Si no está unido → botón "Join match" (guest sin nombre: modal para ingresarlo)
+10. Si ya está unido → solo vista
 
 ### Flujo: Vista pública de previsualización
 1. Usuario (autenticado o no) abre `/preview/match/:id` o `/preview/tournament/:id`

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCurrentUser, saveEvent } from '../services/db'
+import { isGoogleUser } from '../services/auth'
 
 const router = useRouter()
 
@@ -16,7 +17,7 @@ const currentUser = ref(null)
 
 onMounted(async () => {
   currentUser.value = await getCurrentUser()
-  if (!currentUser.value) {
+  if (!currentUser.value || !isGoogleUser(currentUser.value)) {
     router.push('/')
   }
 })

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { isGoogleUser, createGuestUser } from '../services/auth'
 import {
   getCurrentUser,
   createTournament,
@@ -94,16 +95,20 @@ function getPhotoURL (displayName) {
 }
 
 onMounted(async () => {
-  currentUser.value = await getCurrentUser()
-  if (!currentUser.value && !isPreview.value) {
-    router.push('/')
-    return
+  let user = await getCurrentUser()
+  if (!user) {
+    user = await createGuestUser()
   }
+  currentUser.value = user
 
   const id = route.params.id
   if (id) {
     await loadTournament(id)
   } else {
+    if (!isGoogleUser(user) && !isPreview.value) {
+      router.push('/')
+      return
+    }
     loading.value = false
   }
 })

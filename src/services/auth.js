@@ -1,10 +1,47 @@
-import { setCurrentUser, clearCurrentUser } from './db'
+import { setCurrentUser, getCurrentUser, clearCurrentUser } from './db'
 
 const SUPERUSER_GID = '111381241389439493988'
 const API_BASE = 'https://api.geduma.com'
 const APP_ID = import.meta.env.VITE_APP_ID
 
 let callbackQueue = []
+
+export function isGoogleUser (user) {
+  return user && user.provider === 'google'
+}
+
+function generateGuestId () {
+  const existing = localStorage.getItem('myteam-guest-id')
+  if (existing) return existing
+  const id = crypto.randomUUID()
+  localStorage.setItem('myteam-guest-id', id)
+  return id
+}
+
+export async function createGuestUser () {
+  const existing = await getCurrentUser()
+  if (existing) return existing
+
+  const googleId = generateGuestId()
+  const guestUser = {
+    googleId,
+    displayName: null,
+    email: null,
+    photoURL: `https://api.dicebear.com/9.x/avataaars/svg?seed=${googleId}`,
+    isSuperuser: false,
+    provider: 'guest'
+  }
+  await setCurrentUser(guestUser)
+  return guestUser
+}
+
+export async function setGuestDisplayName (name) {
+  const user = await getCurrentUser()
+  if (user && user.provider === 'guest') {
+    user.displayName = name
+    await setCurrentUser(user)
+  }
+}
 
 export async function login (providerId, redirectTo) {
   const redirect = redirectTo || (window.location.search.includes('redirect=')
