@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCurrentUser, getEvent, saveEvent, deleteEvent, renewEvent, setPlayerTeam, shuffleTeams, removePlayerFromEvent, isEventExpired } from '../services/db'
+import { createGuestUser, setGuestDisplayName, isGoogleUser } from '../services/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,11 +47,11 @@ const isTournament = computed(() => route.name === 'tournament')
 const isPreview = computed(() => route.meta.preview === true)
 
 onMounted(async () => {
-  currentUser.value = await getCurrentUser()
-  if (!currentUser.value && !isPreview.value) {
-    router.push('/')
-    return
+  let user = await getCurrentUser()
+  if (!user) {
+    user = await createGuestUser()
   }
+  currentUser.value = user
   if (!isPreview.value && isTournament.value) {
     loading.value = false
     return
@@ -128,17 +129,44 @@ async function handleRenew () {
 
 async function handleJoin () {
   if (!event.value || !currentUser.value || isExpired.value) return
+
+  if (!isGoogleUser(currentUser.value) && !currentUser.value.displayName) {
+    joinName.value = ''
+    joinNameError.value = ''
+    showNameModal.value = true
+    return
+  }
+
   joining.value = true
+  const name = currentUser.value.displayName
   const updated = { ...event.value }
   updated.players.push({
     id: currentUser.value.googleId,
-    displayName: currentUser.value.displayName,
+    displayName: name,
     photoURL: currentUser.value.photoURL,
     team: null
   })
   await saveEvent(updated)
   event.value = updated
   joining.value = false
+}
+
+function confirmJoinName () {
+  if (!joinName.value.trim()) {
+    joinNameError.value = 'Name is required'
+    return
+  }
+  if (event.value && event.value.players.some(p =>
+    p.displayName?.toLowerCase() === joinName.value.trim().toLowerCase()
+  )) {
+    joinNameError.value = 'Name already taken in this event'
+    return
+  }
+
+  setGuestDisplayName(joinName.value.trim())
+  showNameModal.value = false
+  currentUser.value.displayName = joinName.value.trim()
+  handleJoin()
 }
 
 async function handleRemovePlayer (userId) {
@@ -148,6 +176,10 @@ async function handleRemovePlayer (userId) {
   event.value = await getEvent(event.value.id)
   removingPlayer.value = false
 }
+
+const showNameModal = ref(false)
+const joinName = ref('')
+const joinNameError = ref('')
 
 const showLineup = ref(false)
 const lineupPlayers = ref([])
@@ -429,6 +461,31 @@ function getPosition (index, total, zone, orientation) {
   </div>
 
   <Teleport to="body">
+    <div v-if="showNameModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showNameModal = false">
+      <div class="bg-[#1a1a1a] rounded-lg p-8 shadow-xl w-80">
+        <h2 class="text-white text-lg font-semibold mb-2">Join match</h2>
+        <p class="text-[#dedcdc] text-sm mb-4">Enter your name to join this match</p>
+        <input
+          v-model="joinName"
+          class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
+          placeholder="Your name"
+          @keyup.enter="confirmJoinName"
+        />
+        <p v-if="joinNameError" class="mt-2 text-red-400 text-sm">{{ joinNameError }}</p>
+        <div class="flex gap-3 mt-6">
+          <button
+            class="flex-1 rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
+            :disabled="joining || !joinName.trim()"
+            @click="confirmJoinName"
+          >{{ joining ? 'Joining...' : 'Join' }}</button>
+          <button
+            class="flex-1 rounded-md bg-gray-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-400"
+            @click="showNameModal = false"
+          >Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70" @click.self="showDeleteModal = false">
       <div class="bg-[#1a1a1a] rounded-lg p-8 shadow-xl w-80">
         <h2 class="text-white text-lg font-semibold mb-2">Delete match</h2>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { login as authLogin, signOut } from '../services/auth'
+import { login as authLogin, signOut, isGoogleUser } from '../services/auth'
 import { getCurrentUser } from '../services/db'
 
 const route = useRoute()
@@ -37,7 +37,7 @@ async function handleSignOut () {
 }
 
 async function doLogin (target, redirectTo) {
-  if (user.value) {
+  if (isGoogleUser(user.value)) {
     router.push(redirectTo)
     return
   }
@@ -115,7 +115,7 @@ function handleFind () {
         >All Events</router-link>
       </div>
       <p v-if="loginError" class="mt-4 text-red-400 text-sm">{{ loginError }}</p>
-      <div v-if="user" class="mt-6 flex items-center justify-center gap-4 text-sm">
+      <div v-if="isGoogleUser(user)" class="mt-6 flex items-center justify-center gap-4 text-sm">
         <span class="text-[#dedcdc]">Logged in as {{ user.displayName }}</span>
         <button class="text-red-400 hover:text-red-300" @click="handleSignOut">Sign out</button>
       </div>

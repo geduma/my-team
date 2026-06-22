@@ -15,9 +15,10 @@ Create soccer matches and round-robin tournaments with your friends. Share invit
 
 ## Features
 
-- **Google sign-in** — no registration, just your Google account
+- **Guest mode** — no login required to find and join events
+- **Google sign-in** — only needed to create events and tournaments
 - **Create matches** — title, date, time, location, description
-- **Join via invite link** — unique hash per event
+- **Join via invite link** — unique hash per event, open to all
 - **Visual soccer field** — see players positioned on a realistic field
 - **Auto shuffle** — randomly divide players into two teams
 - **Manual swap** — drag or click players to move between teams
@@ -38,7 +39,7 @@ Create soccer matches and round-robin tournaments with your friends. Share invit
 | Build | Vite 7 |
 | Styling | Tailwind CSS 3 |
 | Routing | Vue Router 4 (history mode) |
-| Auth | Google Identity Services (GIS) |
+| Auth | Geduma Auth API (OAuth centralizado) · Guest mode (UUID local) |
 | Database | Supabase (PostgreSQL) |
 | Avatars | DiceBear HTTP API |
 | Linting | StandardJS |
@@ -57,7 +58,7 @@ npm run dev
 ### Environment Variables
 
 ```env
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+VITE_APP_ID=app_xxxxxx
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
@@ -75,17 +76,20 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 ## Routes
 
-| Path | Auth | Description |
-|------|:----:|-------------|
+| Path | Required auth | Description |
+|------|:------------:|-------------|
 | `/` | No | Landing page |
-| `/create` | Yes | Create a match |
-| `/join/:hash` | Yes | Join via invite link |
-| `/match/:id` | Yes | Match details & management |
+| `/create` | Google | Create a match |
+| `/join/:hash` | No* | Join via invite link (guest: enter name) |
+| `/match/:id` | No* | Match details & join (guest: view & join) |
 | `/preview/match/:id` | No | Public read-only match view |
-| `/tournament` | Yes | Create a tournament |
-| `/tournament/:id` | Yes | Tournament details & management |
+| `/tournament` | Google | Create a tournament |
+| `/tournament/:id` | No* | Tournament details (guest: read-only) |
 | `/preview/tournament/:id` | No | Public read-only tournament view |
 | `/events` | No | Public list of all events |
+| `/auth/callback` | No | OAuth callback |
+
+_* Guest users get an auto-generated UUID identity stored in IndexedDB._
 
 ## Screenshots
 

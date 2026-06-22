@@ -5,7 +5,7 @@
 - **Build:** Vite 7
 - **Routing:** Vue Router 4 (history mode)
 - **Styling:** Tailwind CSS 3
-- **Auth:** Geduma Auth API (OAuth centralizado) — 3 endpoints HTTP, sin CDN ni npm package
+- **Auth:** Geduma Auth API (OAuth centralizado) + Guest mode (UUID local) — 3 endpoints HTTP, sin CDN ni npm package
 - **Storage:** Supabase (PostgreSQL) para eventos y jugadores
 - **Session:** IndexedDB solo para `currentUser`
 - **Avatars:** DiceBear HTTP API
@@ -63,17 +63,23 @@ npx standard     # lint con StandardJS
 ### Persistencia
 - **Supabase:** eventos (`events`) y jugadores (`players`)
 - **IndexedDB:** solo sesión del usuario (`currentUser` en DB `myteam-user`)
+- **localStorage:** `myteam-guest-id` como backup del UUID guest (si se pierde IndexedDB)
 - Helper functions en `src/services/db.js`
 
-### Geduma Auth
-- API base hardcodeada como constante en `src/services/auth.js`: `API_BASE = 'https://api.geduma.com'`
-- App ID vía `VITE_APP_ID` en `.env` (archivo ignorado por git)
-- Flujo: `login(providerId)` → POST `/auth/login/{appId}/{providerId}` → redirect a OAuth provider → callback a `/auth/callback?session_token=xxx` → GET `/auth/session/{sessionToken}` → guardar usuario en IndexedDB
-- Solo se usa `prov_google` como provider
-- `session_token` single-use: se elimina en la API tras consultarlo
-- El `redirect` destino se persiste en `sessionStorage` antes del redirect OAuth
-- Avatar: DiceBear HTTP API con `email` como seed
-- El superuser se detecta por Google ID hardcodeado en `auth.js`
+### Auth (híbrido guest + Google OAuth)
+- **Guest mode:** al primer acceso sin usuario, `createGuestUser()` genera un UUID, lo persiste en IndexedDB (`currentUser`) y en localStorage (`myteam-guest-id` como backup). `provider: 'guest'`.
+- **Google OAuth:** solo requerido para crear eventos y torneos. Usa Geduma Auth API.
+- Funciones en `src/services/auth.js`:
+  - `isGoogleUser(user)` → true si `user.provider === 'google'`
+  - `createGuestUser()` → genera/recupera UUID guest, lo guarda en IndexedDB
+  - `setGuestDisplayName(name)` → actualiza `displayName` del guest en IndexedDB
+  - `login(providerId)` → inicia OAuth (Google)
+  - `processCallback(sessionToken)` → canjea token por datos de sesión
+- API base hardcodeada: `API_BASE = 'https://api.geduma.com'`
+- App ID vía `VITE_APP_ID` en `.env`
+- Flujo Google: `login('prov_google')` → POST `/auth/login/{appId}/{providerId}` → redirect → callback → GET `/auth/session/{sessionToken}` → guardar usuario en IndexedDB → se ignora el guest previo
+- Avatar DiceBear: seed = email (Google) o UUID (guest)
+- Superuser detectado por Google ID hardcodeado (`SUPERUSER_GID`)
 
 ### Variables de entorno
 - Archivo `.env` en la raíz (no commiteado)
@@ -91,20 +97,23 @@ npx standard     # lint con StandardJS
 |------|-----------|:---:|
 | `/` | Home.view | No |
 | `/create` | Create.view | Sí |
-| `/join/:hash` | Join.view | Sí |
-| `/match/:id` | Match.view | Sí |
+| `/join/:hash` | Join.view | No* |
+| `/match/:id` | Match.view | No* |
 | `/tournament` | Tournament.view | Sí |
-| `/tournament/:id` | Tournament.view | Sí |
+| `/tournament/:id` | Tournament.view | No* |
 | `/preview/match/:id` | Match.view | No (preview) |
 | `/preview/tournament/:id` | Tournament.view | No (preview) |
 | `/auth/callback` | AuthCallback.view | No |
 | `/events` | Events.view | No |
 
+_* Si no hay usuario en IndexedDB, se crea guest automáticamente (UUID)._
+
 ### Navegación protegida
-- `router.beforeEach` verifica `currentUser` en IndexedDB
-- Si la ruta requiere auth y no hay usuario, guardar destino en query param `redirect` y redirige a Home con `?login=true`
+- `router.beforeEach` verifica `currentUser` en IndexedDB + `isGoogleUser()` en `auth.js`
+- Si la ruta requiere auth (`requiresAuth: true`) y el usuario no es Google-authenticated, guardar destino en query param `redirect` y redirige a Home con `?login=true`
+- `/join/:hash`, `/match/:id`, `/tournament/:id` ya no requieren auth — cualquiera puede acceder
 - Home detecta `?login=true` y ejecuta `login('prov_google')`, que persiste el `redirect` en `sessionStorage` y redirige al provider OAuth
-- Tras el callback, `AuthCallback.view.vue` procesa el `session_token`, guarda el usuario en IndexedDB y redirige al destino guardado
+- Tras el callback, `AuthCallback.view.vue` procesa el `session_token`, guarda el usuario en IndexedDB (reemplazando al guest) y redirige al destino guardado
 
 ### Estructura de archivos
 ```
@@ -124,7 +133,7 @@ src/
 ├── router/
 │   └── index.js
 └── services/
-    ├── auth.js        # Geduma Auth API (OAuth centralizado)
+    ├── auth.js        # Geduma Auth API + Guest mode
     ├── db.js           # Supabase + IndexedDB (session)
     ├── supabase.js     # Supabase client
     └── tournament.js   # Round-robin algorithm
