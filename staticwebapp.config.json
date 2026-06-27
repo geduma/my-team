@@ -1,6 +1,6 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/logo.png", "/background.mp4"]
+    "exclude": ["/assets/*", "/logo.png", "/background.mp4", "/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-120x120.png", "/apple-touch-icon-120x120-precomposed.png"]
   }
 }
