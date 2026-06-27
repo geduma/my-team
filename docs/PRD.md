@@ -66,7 +66,7 @@ Aplicación web para organizar partidos de fútbol con amigos. Permite crear eve
 | Ruta | Componente | Auth requerida | Descripción |
 |------|-----------|:------------:|-------------|
 | `/` | Home.view | No | Landing page con acciones principales |
-| `/auth/callback` | AuthCallback.view | No | Callback OAuth — recibe `session_token` y completa login |
+| `/auth/callback` | AuthCallback.view | No | Callback OAuth — recibe `session_token` vía **fragment** (hash) de la URL y completa login |
 | `/create` | Create.view | Google | Formulario para crear nuevo evento |
 | `/join/:hash` | Join.view | No* | Unirse a evento por hash (guest: input nombre) |
 | `/match/:id` | Match.view | No* | Detalle del evento (guest: unirse, ver info) |

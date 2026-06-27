@@ -8,7 +8,8 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
-  const params = new URLSearchParams(window.location.search)
+  const hash = window.location.hash.substring(1)
+  const params = new URLSearchParams(hash)
   const sessionToken = params.get('session_token')
 
   if (!sessionToken) {
