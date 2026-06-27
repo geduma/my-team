@@ -77,7 +77,7 @@ npx standard     # lint con StandardJS
   - `processCallback(sessionToken)` → canjea token por datos de sesión
 - API base hardcodeada: `API_BASE = 'https://api.geduma.com'`
 - App ID vía `VITE_APP_ID` en `.env`
-- Flujo Google: `login('prov_google')` → POST `/auth/login/{appId}/{providerId}` → redirect → callback → GET `/auth/session/{sessionToken}` → guardar usuario en IndexedDB → se ignora el guest previo
+- Flujo Google: `login('prov_google')` → POST `/auth/login/{appId}/{providerId}` → redirect → callback (lee `session_token` del **fragment** de la URL, no del query string) → GET `/auth/session/{sessionToken}` → guardar usuario en IndexedDB → se ignora el guest previo
 - Avatar DiceBear: seed = email (Google) o UUID (guest)
 - Superuser detectado por Google ID hardcodeado (`SUPERUSER_GID`)
 
@@ -113,7 +113,7 @@ _* Si no hay usuario en IndexedDB, se crea guest automáticamente (UUID)._
 - Si la ruta requiere auth (`requiresAuth: true`) y el usuario no es Google-authenticated, guardar destino en query param `redirect` y redirige a Home con `?login=true`
 - `/join/:hash`, `/match/:id`, `/tournament/:id` ya no requieren auth — cualquiera puede acceder
 - Home detecta `?login=true` y ejecuta `login('prov_google')`, que persiste el `redirect` en `sessionStorage` y redirige al provider OAuth
-- Tras el callback, `AuthCallback.view.vue` procesa el `session_token`, guarda el usuario en IndexedDB (reemplazando al guest) y redirige al destino guardado
+- Tras el callback, `AuthCallback.view.vue` lee el `session_token` del **fragment** (`#session_token=...`) de la URL, procesa el token, guarda el usuario en IndexedDB (reemplazando al guest) y redirige al destino guardado
 
 ### Estructura de archivos
 ```
