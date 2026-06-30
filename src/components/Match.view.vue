@@ -280,11 +280,13 @@ function getPosition (index, total, zone, orientation) {
 
         <div v-else-if="event" class="bg-[#00000096] p-10 rounded-lg">
           <!-- Header -->
-          <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
-            <div v-if="isPreview && !canManage" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5">Preview</div>
-            <div v-else-if="isExpired" class="text-xs text-red-400 border border-red-400/40 rounded-full px-2 py-0.5">Expired</div>
-            <div v-if="canManage && !editing" class="flex gap-2">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-3">
+              <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
+              <div v-if="isPreview && !canManage" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5">Preview</div>
+              <div v-else-if="isExpired" class="text-xs text-red-400 border border-red-400/40 rounded-full px-2 py-0.5">Expired</div>
+            </div>
+            <div v-if="canManage && !editing" class="flex flex-wrap gap-2">
               <button
                 v-if="canEdit"
                 class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
