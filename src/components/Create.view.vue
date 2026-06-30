@@ -75,7 +75,7 @@ async function handleSubmit () {
           />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="sr-only" for="date">Date</label>
             <input

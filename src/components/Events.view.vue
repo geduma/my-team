@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getAllEvents, getAllTournaments, isEventExpired, getCurrentUser } from '../services/db'
 
+const router = useRouter()
 const currentUser = ref(null)
 const allEvents = ref([])
 const loading = ref(true)
@@ -45,6 +47,15 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+function navigateToEvent (event) {
+  const isOwner = currentUser.value && event.ownerId === currentUser.value.googleId
+  if (isOwner) {
+    router.push(event._isTournament ? `/tournament/${event.id}` : `/match/${event.id}`)
+  } else {
+    router.push(event._isTournament ? `/preview/tournament/${event.id}` : `/preview/match/${event.id}`)
+  }
+}
 </script>
 
 <template>
@@ -80,7 +91,7 @@ onMounted(async () => {
               v-for="event in events"
               :key="event.id"
               class="hover:bg-white/5 cursor-pointer"
-              @click="$router.push(event._isTournament ? `/preview/tournament/${event.id}` : `/preview/match/${event.id}`)"
+              @click="navigateToEvent(event)"
             >
               <td class="px-4 py-3 font-mono text-xs text-[#dedcdc]/60">{{ event.hash || '—' }}</td>
               <td class="px-4 py-3 font-medium text-white">{{ event.title }}
