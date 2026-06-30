@@ -2,11 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAllEvents, getAllTournaments, isEventExpired, getCurrentUser } from '../services/db'
+import { login as authLogin, isGoogleUser } from '../services/auth'
 
 const router = useRouter()
 const currentUser = ref(null)
 const allEvents = ref([])
 const loading = ref(true)
+const loggingIn = ref(false)
 
 const events = computed(() => {
   const isSuperuser = currentUser.value?.isSuperuser === true
@@ -56,14 +58,31 @@ function navigateToEvent (event) {
     router.push(event._isTournament ? `/preview/tournament/${event.id}` : `/preview/match/${event.id}`)
   }
 }
+
+async function handleLogin () {
+  loggingIn.value = true
+  try {
+    await authLogin('prov_google', '/events')
+  } catch {
+    loggingIn.value = false
+  }
+}
 </script>
 
 <template>
   <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl">
-      <h1 class="text-center text-2xl font-bold text-[#dedcdc] sm:text-3xl">
-        All Events
-      </h1>
+      <div class="text-center">
+        <h1 class="text-center text-2xl font-bold text-[#dedcdc] sm:text-3xl">
+          All Events
+        </h1>
+        <button
+          v-if="currentUser && !isGoogleUser(currentUser)"
+          class="mt-4 rounded-md bg-[#0b88de] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] disabled:opacity-50"
+          :disabled="loggingIn"
+          @click="handleLogin"
+        >{{ loggingIn ? 'Signing in...' : 'Sign in to edit your events' }}</button>
+      </div>
 
       <div v-if="loading" class="mt-8 text-center text-[#dedcdc]">Loading...</div>
 
