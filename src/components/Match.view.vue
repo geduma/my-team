@@ -11,6 +11,7 @@ const currentUser = ref(null)
 const event = ref(null)
 const loading = ref(true)
 const editing = ref(false)
+const eventBackup = ref(null)
 const error = ref('')
 const copySuccess = ref(false)
 const showDeleteModal = ref(false)
@@ -82,10 +83,15 @@ async function loadEvent () {
 }
 
 function startEditing () {
+  eventBackup.value = { ...event.value }
   editing.value = true
 }
 
 function cancelEditing () {
+  if (eventBackup.value) {
+    event.value = { ...eventBackup.value }
+    eventBackup.value = null
+  }
   editing.value = false
 }
 
@@ -276,7 +282,7 @@ function getPosition (index, total, zone, orientation) {
           <!-- Header -->
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
-            <div v-if="isPreview" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5">Preview</div>
+            <div v-if="isPreview && !canManage" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5">Preview</div>
             <div v-else-if="isExpired" class="text-xs text-red-400 border border-red-400/40 rounded-full px-2 py-0.5">Expired</div>
             <div v-if="canManage && !editing" class="flex gap-2">
               <button
