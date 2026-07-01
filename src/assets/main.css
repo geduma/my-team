@@ -8,6 +8,7 @@
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-y: auto;
 }
 
@@ -17,14 +18,25 @@ select {
   font-size: 16px !important;
 }
 
+input:not([type="radio"]):not([type="checkbox"]) {
+  height: 52px;
+}
+
 input[type="date"],
 input[type="time"] {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+@media (max-width: 639px) {
+  input:not([type="radio"]):not([type="checkbox"]) {
+    width: 286px;
+  }
 }
 
 video {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   object-fit: cover;
   position: fixed;
@@ -55,6 +67,7 @@ footer > a:active {
   position: fixed;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   top: 0;
   left: 0;
   right: 0;
