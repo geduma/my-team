@@ -38,6 +38,8 @@ const awayScore = ref(0)
 const showDeleteModal = ref(false)
 const editingTitle = ref(false)
 const editTitleValue = ref('')
+const editingDescription = ref(false)
+const editDescriptionValue = ref('')
 const addingParticipant = ref(false)
 const removingParticipant = ref(false)
 const savingScore = ref(false)
@@ -237,17 +239,30 @@ async function handleRenew () {
   renewing.value = false
 }
 
-function startEditTitle () {
+function startEdit () {
   if (!tournament.value) return
   editTitleValue.value = tournament.value.title
+  editDescriptionValue.value = tournament.value.description || ''
   editingTitle.value = true
+  editingDescription.value = true
 }
 
 async function saveTitle () {
   if (!tournament.value || !editTitleValue.value.trim()) return
-  await updateTournament(tournament.value.id, { title: editTitleValue.value.trim() })
+  const fields = { title: editTitleValue.value.trim() }
+  if (editingDescription.value) {
+    fields.description = editDescriptionValue.value.trim() || null
+  }
+  await updateTournament(tournament.value.id, fields)
   tournament.value.title = editTitleValue.value.trim()
+  tournament.value.description = editDescriptionValue.value.trim() || null
   editingTitle.value = false
+  editingDescription.value = false
+}
+
+function cancelEdit () {
+  editingTitle.value = false
+  editingDescription.value = false
 }
 </script>
 
@@ -264,24 +279,22 @@ async function saveTitle () {
 
       <!-- Creation form -->
       <div v-else-if="!tournament" class="bg-[#00000096] p-4 sm:p-10 rounded-lg">
-        <h1 class="text-2xl font-bold text-white mb-6">New Tournament</h1>
-        <div class="space-y-4">
+        <h1 class="text-2xl font-bold text-white mb-2 sm:mb-6">New Tournament</h1>
+        <div class="space-y-2 sm:space-y-4">
           <div>
-            <label class="sr-only" for="tournament-title">Tournament title</label>
+            <label class="block text-sm text-[#dedcdc] mb-1" for="tournament-title">Tournament title</label>
             <input
               id="tournament-title"
               v-model="title"
               class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-              placeholder="Tournament title"
             />
           </div>
           <div>
-            <label class="sr-only" for="tournament-desc">Description</label>
+            <label class="block text-sm text-[#dedcdc] mb-1" for="tournament-desc">Description (optional)</label>
             <textarea
               id="tournament-desc"
               v-model="description"
               class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-              placeholder="Description (optional)"
               rows="3"
             ></textarea>
           </div>
@@ -297,46 +310,61 @@ async function saveTitle () {
       <div v-else class="bg-[#00000096] p-4 sm:p-10 rounded-lg">
         <!-- Header -->
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div v-if="editingTitle" class="flex flex-col sm:flex-row gap-2 flex-1">
-            <input
-              v-model="editTitleValue"
-              class="w-full sm:flex-1 rounded-lg border-gray-200 p-2 text-sm shadow-sm"
-              @keyup.enter="saveTitle"
-            />
-            <div class="flex gap-2">
+          <div v-if="editingTitle" class="flex-1">
+            <div>
+              <label class="block text-sm text-[#dedcdc] mb-1" for="edit-tournament-title">Tournament title</label>
+              <input
+                id="edit-tournament-title"
+                v-model="editTitleValue"
+                class="w-full rounded-lg border-gray-200 p-2 text-sm shadow-sm"
+                @keyup.enter="saveTitle"
+                autofocus
+              />
+            </div>
+            <div class="mt-2">
+              <label class="block text-sm text-[#dedcdc] mb-1" for="edit-tournament-desc">Description (optional)</label>
+              <textarea
+                id="edit-tournament-desc"
+                v-model="editDescriptionValue"
+                class="w-full rounded-lg border-gray-200 p-2 text-sm shadow-sm"
+                rows="2"
+              ></textarea>
+            </div>
+            <div class="flex gap-2 mt-2">
               <button
                 class="rounded-md bg-[#64e34f] px-3 py-2 text-sm font-semibold text-black hover:opacity-90"
                 @click="saveTitle"
               >Save</button>
               <button
                 class="rounded-md bg-gray-500 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-400"
-                @click="editingTitle = false"
+                @click="cancelEdit"
               >Cancel</button>
             </div>
           </div>
           <h1 v-else class="text-xl sm:text-2xl font-bold text-white break-words">{{ tournament.title }}</h1>
           <div v-if="isPreview" class="self-start shrink-0 text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5 mt-1 sm:mt-0">Preview</div>
           <div v-else-if="isExpired" class="self-start shrink-0 text-xs text-red-400 border border-red-400/40 rounded-full px-2 py-0.5 mt-1 sm:mt-0">Expired</div>
-          <div v-if="canManage && !editingTitle" class="flex gap-2">
-            <button
-              v-if="canEdit"
-              class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
-              @click="startEditTitle"
-            >Edit</button>
-            <button
-              class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-              @click="showDeleteModal = true"
-            >Delete</button>
-            <button
-              v-if="isExpired && isSuperuser"
-              class="rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
-              :disabled="renewing"
-              @click="handleRenew"
-            >{{ renewing ? 'Renewing...' : 'Renew' }}</button>
-          </div>
         </div>
 
-        <p v-if="tournament.description" class="mt-2 text-[#dedcdc] text-sm">{{ tournament.description }}</p>
+        <p v-if="!editingDescription && tournament.description" class="mt-2 text-[#dedcdc] text-sm line-clamp-3" :title="tournament.description">{{ tournament.description }}</p>
+
+        <div v-if="canManage && !editingTitle" class="flex gap-2 mt-2">
+          <button
+            v-if="canEdit"
+            class="rounded-md bg-[#0b88de] px-4 py-2 text-sm font-semibold text-white hover:bg-[#50b1f3]"
+            @click="startEdit"
+          >Edit</button>
+          <button
+            class="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            @click="showDeleteModal = true"
+          >Delete</button>
+          <button
+            v-if="isExpired && isSuperuser"
+            class="rounded-md bg-[#64e34f] px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:opacity-50"
+            :disabled="renewing"
+            @click="handleRenew"
+          >{{ renewing ? 'Renewing...' : 'Renew' }}</button>
+        </div>
 
         <!-- Participants section -->
         <div class="mt-8">

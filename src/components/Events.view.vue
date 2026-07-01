@@ -77,7 +77,7 @@ async function handleLogin () {
           All Events
         </h1>
         <button
-          v-if="currentUser && !isGoogleUser(currentUser)"
+          v-if="!currentUser || !isGoogleUser(currentUser)"
           class="mt-4 rounded-md bg-[#0b88de] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#50b1f3] disabled:opacity-50"
           :disabled="loggingIn"
           @click="handleLogin"
