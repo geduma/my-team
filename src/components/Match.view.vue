@@ -260,7 +260,7 @@ function getPosition (index, total, zone, orientation) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-screen-xl px-4 py-8 sm:py-16 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-2xl">
 
       <!-- Tournament placeholder -->
@@ -278,9 +278,9 @@ function getPosition (index, total, zone, orientation) {
           <router-link to="/" class="mt-4 inline-block text-[#0b88de] hover:underline">Go home</router-link>
         </div>
 
-        <div v-else-if="event" class="bg-[#00000096] p-10 rounded-lg">
+        <div v-else-if="event" class="bg-[#00000096] p-4 sm:p-10 rounded-lg">
           <!-- Header -->
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-3">
               <h1 class="text-2xl font-bold text-white">{{ event.title }}</h1>
               <div v-if="isPreview && !canManage" class="text-xs text-[#dedcdc]/60 border border-[#dedcdc]/30 rounded-full px-2 py-0.5">Preview</div>
@@ -306,19 +306,18 @@ function getPosition (index, total, zone, orientation) {
           </div>
 
           <!-- Edit mode -->
-          <div v-if="editing" class="mt-6 space-y-4">
+          <div v-if="editing" class="mt-2 sm:mt-6 space-y-2 sm:space-y-4">
             <div>
-              <label class="sr-only" for="edit-title">Title</label>
+              <label class="block text-sm text-[#dedcdc] mb-1" for="edit-title">Title</label>
               <input
                 id="edit-title"
                 v-model="event.title"
                 class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-                placeholder="Match title"
               />
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="sr-only" for="edit-date">Date</label>
+                <label class="block text-sm text-[#dedcdc] mb-1" for="edit-date">Date</label>
                 <input
                   id="edit-date"
                   v-model="event.date"
@@ -327,7 +326,7 @@ function getPosition (index, total, zone, orientation) {
                 />
               </div>
               <div>
-                <label class="sr-only" for="edit-time">Time</label>
+                <label class="block text-sm text-[#dedcdc] mb-1" for="edit-time">Time</label>
                 <input
                   id="edit-time"
                   v-model="event.time"
@@ -337,16 +336,15 @@ function getPosition (index, total, zone, orientation) {
               </div>
             </div>
             <div>
-              <label class="sr-only" for="edit-location">Location</label>
+              <label class="block text-sm text-[#dedcdc] mb-1" for="edit-location">Location</label>
               <input
                 id="edit-location"
                 v-model="event.location"
                 class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-                placeholder="Location"
               />
             </div>
             <div>
-              <label class="sr-only" for="edit-maxPlayers">Players</label>
+              <label class="block text-sm text-[#dedcdc] mb-1" for="edit-maxPlayers">Players</label>
               <input
                 id="edit-maxPlayers"
                 v-model="event.maxPlayers"
@@ -357,10 +355,11 @@ function getPosition (index, total, zone, orientation) {
               />
             </div>
             <div>
+              <label class="block text-sm text-[#dedcdc] mb-1" for="edit-description">Description</label>
               <textarea
+                id="edit-description"
                 v-model="event.description"
                 class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-                placeholder="Description"
                 rows="3"
               ></textarea>
             </div>
@@ -395,7 +394,7 @@ function getPosition (index, total, zone, orientation) {
             </div>
             <div v-if="event.description">
               <span class="text-sm opacity-60">Description</span>
-              <p class="text-white">{{ event.description }}</p>
+              <p class="text-white line-clamp-3" :title="event.description">{{ event.description }}</p>
             </div>
             <div>
               <span class="text-sm opacity-60">Players</span>

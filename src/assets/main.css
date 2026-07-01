@@ -6,15 +6,27 @@
   --main-text-color: #dedcdc;
 }
 
-body {
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow-y: auto;
+html, body {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
-input,
-textarea,
-select {
+#app {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+input, textarea, select {
   font-size: 16px !important;
 }
 
@@ -29,8 +41,8 @@ input[type="time"] {
 }
 
 @media (max-width: 639px) {
-  input:not([type="radio"]):not([type="checkbox"]) {
-    width: 286px;
+  label {
+    font-size: 0.65rem !important;
   }
 }
 

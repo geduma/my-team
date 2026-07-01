@@ -57,27 +57,26 @@ async function handleSubmit () {
 </script>
 
 <template>
-  <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-lg bg-[#00000096] p-10 rounded-lg">
+  <div class="mx-auto max-w-screen-xl px-4 py-8 sm:py-16 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-lg bg-[#00000096] p-4 sm:p-10 rounded-lg">
       <h1 class="text-center text-2xl font-bold text-[#dedcdc] sm:text-3xl">
         Create a new match
       </h1>
 
-      <form class="mb-0 mt-6 space-y-4 rounded-lg p-4 shadow-lg sm:p-6 lg:p-8" @submit.prevent="handleSubmit">
+      <form class="mb-0 mt-2 sm:mt-6 space-y-2 sm:space-y-4 rounded-lg p-4 shadow-lg sm:p-6 lg:p-8" @submit.prevent="handleSubmit">
         <div>
-          <label class="sr-only" for="title">Match title</label>
+          <label class="block text-sm text-[#dedcdc] mb-1" for="title">Match title</label>
           <input
             id="title"
             v-model="title"
             class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-            placeholder="Match title"
             required
           />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="sr-only" for="date">Date</label>
+            <label class="block text-sm text-[#dedcdc] mb-1" for="date">Date</label>
             <input
               id="date"
               v-model="date"
@@ -87,7 +86,7 @@ async function handleSubmit () {
             />
           </div>
           <div>
-            <label class="sr-only" for="time">Time</label>
+            <label class="block text-sm text-[#dedcdc] mb-1" for="time">Time</label>
             <input
               id="time"
               v-model="time"
@@ -99,23 +98,21 @@ async function handleSubmit () {
         </div>
 
         <div>
-          <label class="sr-only" for="location">Location</label>
+          <label class="block text-sm text-[#dedcdc] mb-1" for="location">Location</label>
           <input
             id="location"
             v-model="location"
             class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-            placeholder="Location"
             required
           />
         </div>
 
         <div>
-          <label class="sr-only" for="description">Description (optional)</label>
+          <label class="block text-sm text-[#dedcdc] mb-1" for="description">Description (optional)</label>
           <textarea
             id="description"
             v-model="description"
             class="w-full rounded-lg border-gray-200 p-4 text-sm shadow-sm"
-            placeholder="Description (optional)"
             rows="3"
           ></textarea>
         </div>
